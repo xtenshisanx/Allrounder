@@ -1,4 +1,4 @@
-Allrounder Custom Rotation for ExileBuddy
+**Allrounder Custom Rotation for ExileBuddy**
 
 Hey Everyboddy,
 this custom rotation is designed and written by xTenshiSanx (me).
@@ -8,19 +8,19 @@ The best is so nobody could destroy the code accidentally.
 The Rotation is Characterspecific so its not a general rotation, you dont have to change the rotation for every character.
 Just setup the Settingsfile in the Settings\Allrounder folder CHARACTERNAME.cfg
 
+**Install**
+
 The working variables for the settingsfile are
-
-(string) Name
-(int) MinManaPercent
-(int) MinLifePercent
-(int) Mobsarround_Distance
-(int) Mobsarround_Count
-(int) Mobsarround_Target // 0 Ma(int)arget // 1 Me
-(int) EnemyDistance
-(int) MaxCount
-
-(bool) CheckForMobsarround
-(bool) OnlyBosses
-(bool) IsTrap
-(bool) IsSummon
-(bool) IsCurse
+-(string) Name
+-(int) MinManaPercent
+-(int) MinLifePercent
+-(int) Mobsarround_Distance
+-(int) Mobsarround_Count
+-(int) Mobsarround_Target // 0 Ma(int)arget // 1 Me
+-(int) EnemyDistance
+-(int) MaxCount
+-(bool) CheckForMobsarround
+-(bool) OnlyBosses
+-(bool) IsTrap
+-(bool) IsSummon
+-(bool) IsCurse
