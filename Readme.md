@@ -16,16 +16,33 @@ The Rotation is Characterspecific so its not a general rotation, you dont have t
 Just setup the Settingsfile in the Settings\Allrounder folder CHARACTERNAME.cfg
 
 The working variables for the settingsfile are
+- (int) PotHealth
+- Min Health for using HealthPotion (Percent)
+- (int) PotMana
+- Min Mana for using ManaPotion (Percent)
 - (string) Name
+- Skillname
 - (int) MinManaPercent
+- Min Mana for using this skill (Percent)
 - (int) MinLifePercent
+- Min Life for using this skill (Percent)
 - (int) Mobsarround_Distance
+- Distance for searching mobs around target
 - (int) Mobsarround_Count
-- (int) Mobsarround_Target // 0 Ma(int)arget // 1 Me
+- Min Count of mobs in range of Target
+- (int) Mobsarround_Target
+- 0 MainTarget // 1 Me
 - (int) EnemyDistance
+- Min Distance for using this Skill
 - (int) MaxCount
+- Max Count of Minions/Traps
 - (bool) CheckForMobsarround
+- Set this to True for searching mobs around target
 - (bool) OnlyBosses
+- BossSkill (Heavy Strike for example)
 - (bool) IsTrap
+- Is Skill a Trap
 - (bool) IsSummon
+- Is Skill a Summonskill
 - (bool) IsCurse
+- Is Skill a Curse

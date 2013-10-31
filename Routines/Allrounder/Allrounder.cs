@@ -318,6 +318,12 @@ namespace Allrounder
                 if(!line.Contains('#'))
                 {
                     line = line.Replace("\"", "");
+                    if (line.Split('=')[0].Trim().Equals("PotHealth"))
+                        if (!line.Split('=')[1].Trim().Equals("0"))
+                            Allrounder.MinLifePercent = int.Parse(line.Split('=')[1].Trim());
+                    if (line.Split('=')[0].Trim().Equals("PotMana"))
+                        if(!line.Split('=')[1].Trim().Equals("0"))
+                            Allrounder.MinManaPercent = int.Parse(line.Split('=')[1].Trim());
                     if (line.Split('=')[0].Trim().Equals("Name"))
                         tmpname = line.Split('=')[1].Trim();
                     if (line.Split('=')[0].Trim().Equals("MinManaPercent"))
@@ -405,7 +411,13 @@ namespace Allrounder
         public static void CreateConfigFile(string file)
         {
             TextWriter tw = new StreamWriter(file);
-            tw.WriteLine("#Fields");
+            tw.WriteLine("#Basic Settings");
+            tw.WriteLine("#In this area you could setup your potionusing");
+            tw.WriteLine("#PotHealth = 0");
+            tw.WriteLine("#PotMana = 0");
+            tw.WriteLine("#Use Quicksilver Flask = false // Work in Progress\n");
+
+            tw.WriteLine("#AttackFields");
             tw.WriteLine("#Name = \"undefined\"");
             tw.WriteLine("#MinManaPercent = 0");
             tw.WriteLine("#MinLifePercent = 0");
@@ -414,13 +426,13 @@ namespace Allrounder
             tw.WriteLine("#Mobsarround_Target = 0 // 0 -> Main Target / 1 -> Me");
             tw.WriteLine("#EnemyDistance = 0");
             tw.WriteLine("#MaxCount = 0 // For Raising/Trap Skills -> MaxCount of Minions/Traps");
-
             tw.WriteLine("#CheckForMobsarround = false");
             tw.WriteLine("#OnlyBosses = false");
             tw.WriteLine("#IsSummon = false");
             tw.WriteLine("#IsTrap = false");
             tw.WriteLine("#IsCurse = false");
             tw.WriteLine("After a Skill you must Set 'CastEnd' then the CR knows a new Skill begins\n");
+
             tw.WriteLine("#Examples");
             tw.WriteLine("#//Unlimited Attack");
             tw.WriteLine("#Name = \"Fireball\"");
@@ -450,6 +462,7 @@ namespace Allrounder
             tw.WriteLine("#Mobsarround_Count = 2");
             tw.WriteLine("#Mobsarround_Target = 1");
             tw.WriteLine("#CastEnd\n");
+
             tw.Close();
         }
     }
@@ -459,10 +472,11 @@ namespace Allrounder
         #region Settings
         //Please only use 1 Setting -> Actually Percent works only
         bool _started = false;
-        int MinLifePercent = 0;
-        int MinManaPercent = 0;
-        int MinLife = 0;
-        int MinMana = 0;
+        public static int MinLifePercent = 70;
+        public static int MinManaPercent = 50;
+        public static bool UseQuicksilverFlask = false;
+        public int MinLife = 0;
+        public int MinMana = 0;
         #endregion
 
         #region RoutineBasics
@@ -527,13 +541,13 @@ namespace Allrounder
         private Composite FlaskBot()
         {
             return new PrioritySelector(
-                new Decorator(ret => Helpers._flaskCd.IsFinished && Helpers.Me.HealthPercent < 70 && Helpers.LifeFlasks.Count() != 0 && !Helpers.Me.HasAura("flask_effect_life"),
+                new Decorator(ret => Helpers._flaskCd.IsFinished && Helpers.Me.HealthPercent < MinLifePercent && Helpers.LifeFlasks.Count() != 0 && !Helpers.Me.HasAura("flask_effect_life"),
                     new Action(ret =>
                     {
                         Helpers.LifeFlasks.First().Use();
                         Helpers._flaskCd.Reset();
                     })),
-                new Decorator(ret => Helpers._flaskCd.IsFinished && Helpers.Me.ManaPercent < 50 && Helpers.ManaFlasks.Count() != 0 && !Helpers.Me.HasAura("flask_effect_mana"),
+                new Decorator(ret => Helpers._flaskCd.IsFinished && Helpers.Me.ManaPercent < MinManaPercent && Helpers.ManaFlasks.Count() != 0 && !Helpers.Me.HasAura("flask_effect_mana"),
                     new Action(ret =>
                     {
                         Helpers.ManaFlasks.First().Use();
