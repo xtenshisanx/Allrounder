@@ -158,7 +158,11 @@ namespace Allrounder
         public static Actor GetCorpseNear(int distance)
         {
             return LokiPoe.EntityManager.OfType<Actor>().FirstOrDefault(corpse => corpse.IsValid && corpse.IsDead && corpse.Name != "Raised Zombie" && !corpse.Type.Contains("trap") && corpse.Distance <= distance);
-        }    
+        }
+        public static int GetCorpsesNear(int distance)
+        {
+            return LokiPoe.EntityManager.OfType<Actor>().Count(corpse => corpse.IsValid && corpse.IsDead && corpse.Name != "Raised Zombie" && !corpse.Type.Contains("trap") && corpse.Distance <= distance);
+        }
         /// <summary>
         /// Check if a Object has got a spell
         /// </summary>
@@ -196,12 +200,12 @@ namespace Allrounder
 
         public bool ShouldRaiseMinions()
         {
-            if (this.Name.Equals("Raise Zombie") && LokiPoe.EntityManager.OfType<Actor>().Count(zombies => zombies.IsValid && !zombies.IsDead && zombies.Reaction == Reaction.Friendly && zombies.Name == "Raised Zombie") < MaxCount && Helpers.GetCorpseNear(30) != null)
+            if (this.Name.Equals("Raise Zombie") && LokiPoe.EntityManager.OfType<Actor>().Count(zombies => zombies.IsValid && !zombies.IsDead && zombies.Reaction == Reaction.Friendly && zombies.Name == "Raised Zombie") < MaxCount && Helpers.GetCorpsesNear(30) > 2)
             {
                 return true;
             }
 
-            if (this.Name.Equals("Raise Spectre") && LokiPoe.EntityManager.OfType<Actor>().Count(spectre => spectre.IsValid && !spectre.IsDead && spectre.Reaction == Reaction.Friendly && spectre.HasAura("Spectral")) < MaxCount && Helpers.GetCorpseNear(30) != null)
+            if (this.Name.Equals("Raise Spectre") && LokiPoe.EntityManager.OfType<Actor>().Count(spectre => spectre.IsValid && !spectre.IsDead && spectre.Reaction == Reaction.Friendly && spectre.HasAura("Spectral")) < MaxCount && Helpers.GetCorpsesNear(30) > 2)
             {
                 return true;
             }
@@ -283,7 +287,7 @@ namespace Allrounder
             return false;
         }
 
-        public Attack(string strName, int iMinManaPercent = 0, int iLifePercent = 0, int iMobsarround_Distance = 0, int iMobsarround_Count = 0, int iMobsarround_Target = 0, int iEnemyDistance = 0, int iMaxCount = 0, bool bCheckForMobsarround = false, bool bOnlyBosses = false, bool bIsTrap = false, bool bIsSummon = false, bool bIsCurse = falseexi)
+        public Attack(string strName, int iMinManaPercent = 0, int iLifePercent = 0, int iMobsarround_Distance = 0, int iMobsarround_Count = 0, int iMobsarround_Target = 0, int iEnemyDistance = 0, int iMaxCount = 0, bool bCheckForMobsarround = false, bool bOnlyBosses = false, bool bIsTrap = false, bool bIsSummon = false, bool bIsCurse = false)
         {
             this.Name = strName;
             this.MinManaPercent = iMinManaPercent;
