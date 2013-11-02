@@ -17,32 +17,36 @@ Just setup the Settingsfile in the Settings\Allrounder folder CHARACTERNAME.cfg
 
 The working variables for the settingsfile are
 - (int) PotHealth
-- Min Health for using HealthPotion (Percent)
+- *Min Health for using HealthPotion (Percent) //default: 70*
 - (int) PotMana
-- Min Mana for using ManaPotion (Percent)
+- *Min Mana for using ManaPotion (Percent) //default: 50*
+- (int) FightDistance
+- *Minimal Distance to fight a enemy //default: 50*
 - (string) Name
-- Skillname
+- *Skillname*
 - (int) MinManaPercent
-- Min Mana for using this skill (Percent)
+- *Min Mana for using this skill (Percent)*
 - (int) MinLifePercent
-- Min Life for using this skill (Percent)
+- *Min Life for using this skill (Percent)*
+- (int) MinEnemylifePercent
+- *Min Life of Enemy for using this skill (Percent) maybe for Crushing Blow attacks*
 - (int) Mobsarround_Distance
-- Distance for searching mobs around target
+- *Distance for searching mobs around target*
 - (int) Mobsarround_Count
-- Min Count of mobs in range of Target
+- *Min Count of mobs in range of Target*
 - (int) Mobsarround_Target
-- 0 MainTarget // 1 Me
+- *0 MainTarget // 1 Me*
 - (int) EnemyDistance
-- Min Distance for using this Skill
+- *Min Distance for using this Skill*
 - (int) MaxCount
-- Max Count of Minions/Traps
+- *Max Count of Minions/Traps*
 - (bool) CheckForMobsarround
-- Set this to True for searching mobs around target
+- *Set this to True for searching mobs around target*
 - (bool) OnlyBosses
-- BossSkill (Heavy Strike for example)
+- *BossSkill (Heavy Strike for example)*
 - (bool) IsTrap
-- Is Skill a Trap
+- *Is Skill a Trap*
 - (bool) IsSummon
-- Is Skill a Summonskill
+- *Is Skill a Summonskill*
 - (bool) IsCurse
-- Is Skill a Curse
+- *Is Skill a Curse*

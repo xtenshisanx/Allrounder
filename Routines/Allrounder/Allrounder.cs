@@ -103,11 +103,20 @@ namespace Allrounder
 
             return SpellManager.CreateSpellCastComposite(spell, reqs, location);
         }
+        /// <summary>
+        /// Move into LineofSight
+        /// </summary>
+        /// <returns></returns>
         public static Composite CreateMoveToLos()
         {
             return new Decorator(ret => !LokiPoe.MeleeLineOfSight.CanSee(LokiPoe.Me.Position, MainTarget.Position),
                 CommonBehaviors.MoveTo(ret => MainTarget.Position, ret => "CreateMoveToLos"));
         }
+        /// <summary>
+        /// Move into given range for combat
+        /// </summary>
+        /// <param name="range">range for combat</param>
+        /// <returns></returns>
         public static Composite CreateMoveToRange(int range)
         {
             return new Decorator(ret => MainTarget.Distance > range,
@@ -159,6 +168,11 @@ namespace Allrounder
         {
             return LokiPoe.EntityManager.OfType<Actor>().FirstOrDefault(corpse => corpse.IsValid && corpse.IsDead && corpse.Name != "Raised Zombie" && !corpse.Type.Contains("trap") && corpse.Distance <= distance);
         }
+        /// <summary>
+        /// returns the number of corpses near player in given distance
+        /// </summary>
+        /// <param name="distance">max distance to look for corpses</param>
+        /// <returns>corpsescount</returns>
         public static int GetCorpsesNear(int distance)
         {
             return LokiPoe.EntityManager.OfType<Actor>().Count(corpse => corpse.IsValid && corpse.IsDead && corpse.Name != "Raised Zombie" && !corpse.Type.Contains("trap") && corpse.Distance <= distance);
@@ -186,6 +200,7 @@ namespace Allrounder
         public string Name = "undefined";
         int MinManaPercent = 0;
         int MinLifePercent = 0;
+        int MinEnemyLifePercent = 0;
         int Mobsarround_Distance = 0;
         int Mobsarround_Count = 0;
         int Mobsarround_Target = 0; // 0 -> Main Target / 1 -> Me
@@ -197,7 +212,10 @@ namespace Allrounder
         bool IsTrap = false;
         bool IsSummon = false;
         bool IsCurse = false;
-
+        /// <summary>
+        /// Checks if the current raising skill should be casted
+        /// </summary>
+        /// <returns></returns>
         public bool ShouldRaiseMinions()
         {
             if (this.Name.Equals("Raise Zombie") && LokiPoe.EntityManager.OfType<Actor>().Count(zombies => zombies.IsValid && !zombies.IsDead && zombies.Reaction == Reaction.Friendly && zombies.Name == "Raised Zombie") < MaxCount && Helpers.GetCorpsesNear(30) > 2)
@@ -211,7 +229,10 @@ namespace Allrounder
             }
             return false;
         }
-
+        /// <summary>
+        /// Checks if the current Traptype should be thrown
+        /// </summary>
+        /// <returns></returns>
         public bool ShouldThrowTrap()
         {
             if(this.Name.Contains("Trap"))
@@ -221,14 +242,20 @@ namespace Allrounder
             }
             return false;
         }
-
+        /// <summary>
+        /// Checks if the current Curse should be casted
+        /// </summary>
+        /// <returns></returns>
         public bool ShouldCastCurse()
         {
             if (!Helpers.MainTarget.HasAura(this.Name))
                 return true;
             return false;
         }
-
+        /// <summary>
+        /// Check if the currentattack could be casted/used
+        /// </summary>
+        /// <returns></returns>
         public bool CanCast()
         {
             int checks = 0;
@@ -236,6 +263,8 @@ namespace Allrounder
             if (MinManaPercent != 0)
                 checks++;
             if (MinLifePercent != 0)
+                checks++;
+            if (MinEnemyLifePercent != 0)
                 checks++;
             if (EnemyDistance != 0)
                 checks++;
@@ -252,6 +281,8 @@ namespace Allrounder
             if (checks == 0)
                 return true;
 
+            if (MinEnemyLifePercent != 0 && Helpers.MainTarget.HealthPercent <= MinEnemyLifePercent)
+                trues++;
             if (Helpers.Me.ManaPercent >= MinManaPercent && MinManaPercent != 0)
                 trues++;
             if (Helpers.Me.HealthPercent >= MinLifePercent && MinLifePercent != 0)
@@ -286,8 +317,23 @@ namespace Allrounder
             }
             return false;
         }
-
-        public Attack(string strName, int iMinManaPercent = 0, int iLifePercent = 0, int iMobsarround_Distance = 0, int iMobsarround_Count = 0, int iMobsarround_Target = 0, int iEnemyDistance = 0, int iMaxCount = 0, bool bCheckForMobsarround = false, bool bOnlyBosses = false, bool bIsTrap = false, bool bIsSummon = false, bool bIsCurse = false)
+        /// <summary>
+        /// Create a new AttackSkill with given params
+        /// </summary>
+        /// <param name="strName">Skillname</param>
+        /// <param name="iMinManaPercent">Minimal Mana Percent for using this Skill</param>
+        /// <param name="iLifePercent">Minimal Life Percent for using this Skill</param>
+        /// <param name="iMobsarround_Distance">Check for Mobsarround DISTANCE</param>
+        /// <param name="iMobsarround_Count">Minimal Mobs for Mobsarroundcheck for true</param>
+        /// <param name="iMobsarround_Target">Desired Target 0-> MainTarget / 1-> Me</param>
+        /// <param name="iEnemyDistance">Minimal Distance for using this Skill</param>
+        /// <param name="iMaxCount">Maximal Count of Minions/Traps/Totems for this Skill</param>
+        /// <param name="bCheckForMobsarround">Check for Mobs arround</param>
+        /// <param name="bOnlyBosses">Use this Skill only on Bosses</param>
+        /// <param name="bIsTrap">Is Skill a Trap</param>
+        /// <param name="bIsSummon">Is Skill a Summon</param>
+        /// <param name="bIsCurse">Is Skill a Curse</param>
+        public Attack(string strName, int iMinManaPercent = 0, int iLifePercent = 0, int iMobsarround_Distance = 0, int iMobsarround_Count = 0, int iMobsarround_Target = 0, int iEnemyDistance = 0, int iMaxCount = 0, int iEnemyHPPercent = 0, bool bCheckForMobsarround = false, bool bOnlyBosses = false, bool bIsTrap = false, bool bIsSummon = false, bool bIsCurse = false)
         {
             this.Name = strName;
             this.MinManaPercent = iMinManaPercent;
@@ -296,6 +342,7 @@ namespace Allrounder
             this.Mobsarround_Target = iMobsarround_Target; // 0 -> Main Target / 1 -> Me
             this.EnemyDistance = iEnemyDistance;
             this.MaxCount = iMaxCount;
+            this.MinEnemyLifePercent = iEnemyHPPercent;
 
             this.CheckForMobsarround = bCheckForMobsarround;
             this.OnlyBosses = bOnlyBosses;
@@ -305,19 +352,27 @@ namespace Allrounder
 
             Helpers.Log.Debug("CustomCR: " + this.Name + " Added to AttackList");
         }
-    
+        /// <summary>
+        /// Reads the characterconfig for allrounder
+        /// </summary>
+        /// <param name="file">Filename default: charname.cfg</param>
         public static void ReadConfigFile(string file)
         {
             TextReader tr = new StreamReader(file);
             string line = null;
             string tmpname = "undefined";
-            int manap = 0, lifep = 0, mad = 0, mac = 0, mat = 0, ed = 0, mc = 0;
+            int manap = 0, lifep = 0, mad = 0, mac = 0, mat = 0, ed = 0, mc = 0, enemylife = 0;
             bool cfm = false, ob = false, it = false, _is = false, _ic = false;
             while((line = tr.ReadLine()) != null)
             {
                 if(!line.Contains('#'))
                 {
                     line = line.Replace("\"", "");
+                    if (line.Split('=')[0].Trim().Equals("MinEnemyLifePercent"))
+                        if (!line.Split('=')[1].Trim().Equals("0"))
+                    if (line.Split('=')[0].Trim().Equals("FightDistance"))
+                        if (!line.Split('=')[1].Trim().Equals("0"))
+                            Allrounder.FightDistance = int.Parse(line.Split('=')[1].Trim());
                     if (line.Split('=')[0].Trim().Equals("PotHealth"))
                         if (!line.Split('=')[1].Trim().Equals("0"))
                             Allrounder.MinLifePercent = int.Parse(line.Split('=')[1].Trim());
@@ -398,21 +453,25 @@ namespace Allrounder
                     if (line.Equals("CastEnd"))
                     {
                         if (!tmpname.Equals("undefined"))
-                            Allrounder.SpellList.Add(new Attack(tmpname, manap, lifep, mad, mac, mat, ed, mc, cfm, ob, it, _is, _ic));
+                            Allrounder.SpellList.Add(new Attack(tmpname, manap, lifep, mad, mac, mat, ed, mc, enemylife, cfm, ob, it, _is, _ic));
                         tmpname = "undefined";
-                        manap = 0; lifep = 0; mad = 0; mac = 0; mat = 0; ed = 0; mc = 0;
+                        manap = 0; lifep = 0; mad = 0; mac = 0; mat = 0; ed = 0; mc = 0; enemylife = 0;
                         cfm = false; ob = false; it = false; _is = false; _ic = false;
                     }
                 }
             }
             tr.Close();
         }
-
+        /// <summary>
+        /// Creates the characterconfigfile default:firsttimeuse
+        /// </summary>
+        /// <param name="file">Name of the characterfile default:charname.cfg</param>
         public static void CreateConfigFile(string file)
         {
             TextWriter tw = new StreamWriter(file);
             tw.WriteLine("#Basic Settings");
             tw.WriteLine("#In this area you could setup your potionusing");
+            tw.WriteLine("#FightDistance = 0");
             tw.WriteLine("#PotHealth = 0");
             tw.WriteLine("#PotMana = 0");
             tw.WriteLine("#Use Quicksilver Flask = false // Work in Progress\n");
@@ -421,6 +480,7 @@ namespace Allrounder
             tw.WriteLine("#Name = \"undefined\"");
             tw.WriteLine("#MinManaPercent = 0");
             tw.WriteLine("#MinLifePercent = 0");
+            tw.WriteLine("#MinEnemyLifePercent = 0");
             tw.WriteLine("#Mobsarround_Distance = 0");
             tw.WriteLine("#Mobsarround_Count = 0");
             tw.WriteLine("#Mobsarround_Target = 0 // 0 -> Main Target / 1 -> Me");
@@ -474,6 +534,7 @@ namespace Allrounder
         bool _started = false;
         public static int MinLifePercent = 70;
         public static int MinManaPercent = 50;
+        public static int FightDistance = 50;
         public static bool UseQuicksilverFlask = false;
         public int MinLife = 0;
         public int MinMana = 0;
@@ -564,7 +625,7 @@ namespace Allrounder
             return new PrioritySelector(
                 FlaskBot(),
                 Helpers.CreateMoveToLos(),
-                Helpers.CreateMoveToRange(50),
+                Helpers.CreateMoveToRange(FightDistance),
                 Allrounder.Fight
                 );
         }
