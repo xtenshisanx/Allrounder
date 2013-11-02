@@ -139,14 +139,14 @@ namespace Allrounder
             Vector2i mpos = Target.Position;
 
             int curCount = 0;
-            foreach (PoEObject mob in Targeting.Combat.Targets)
+            foreach (Monster mob in Targeting.Combat.Targets)
             {
                 if (mob.ID == Target.ID)
                 {
                     continue;
                 }
 
-                if (mob.Position.Distance(mpos) < distance)
+                if (mob.Position.Distance(mpos) < distance && !mob.IsDead)
                 {
                     curCount++;
                 }
@@ -248,7 +248,7 @@ namespace Allrounder
         /// <returns></returns>
         public bool ShouldCastCurse()
         {
-            if (!Helpers.MainTarget.HasAura(this.Name))
+            if (!Helpers.MainTarget.HasAura(this.Name) && Helpers.MainTarget.IsCursable)
                 return true;
             return false;
         }
