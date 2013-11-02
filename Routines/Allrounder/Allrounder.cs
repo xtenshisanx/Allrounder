@@ -491,7 +491,7 @@ namespace Allrounder
             tw.WriteLine("#IsSummon = false");
             tw.WriteLine("#IsTrap = false");
             tw.WriteLine("#IsCurse = false");
-            tw.WriteLine("After a Skill you must Set 'CastEnd' then the CR knows a new Skill begins\n");
+            tw.WriteLine("#After a Skill you must Set 'CastEnd' then the CR knows a new Skill begins\n");
 
             tw.WriteLine("#Examples");
             tw.WriteLine("#//Unlimited Attack");
