@@ -183,9 +183,9 @@ namespace Allrounder
         /// <param name="_obj">Object/Actor</param>
         /// <param name="_spellname">Spellname</param>
         /// <returns>true/false</returns>
-        public static bool ObjectHasSpell(PoEObject _obj, string _spellname)
+        public static bool ObjectHasSpell(Actor _obj, string _spellname)
         {
-            foreach(Spell _spell in _obj.Components.ActorComponent.AvailableSpells)
+            foreach(Spell _spell in _obj.AvailableSpells)
             {
                 if(_spell.IsValid)
                     if (_spell.Name != null && _spell.Name.Equals(_spellname))
@@ -212,6 +212,16 @@ namespace Allrounder
         bool IsTrap = false;
         bool IsSummon = false;
         bool IsCurse = false;
+        bool IsTotem = false;
+        public bool ShouldRaiseTotem()
+        {
+            Vector2i targetpos = Helpers.MainTarget.Position;
+            if (LokiPoe.EntityManager.OfType<Actor>().Count(totem => totem.IsValid && !totem.IsDead && totem.Reaction == Reaction.Friendly && totem.Name.Equals("Totem") && Helpers.ObjectHasSpell(totem, this.Name) && (Helpers.MainTarget.Position.Distance(totem.Position) <= 30)) < MaxCount)
+            {
+                return true;
+            }
+            return false;
+        }
         /// <summary>
         /// Checks if the current raising skill should be casted
         /// </summary>
@@ -237,7 +247,7 @@ namespace Allrounder
         {
             if(this.Name.Contains("Trap"))
             {
-                if (LokiPoe.EntityManager.OfType<Actor>().Count(trap => trap.IsValid && !trap.IsDead && Helpers.ObjectHasSpell(trap as PoEObject, this.Name)) < MaxCount)
+                if (LokiPoe.EntityManager.OfType<Actor>().Count(trap => trap.IsValid && !trap.IsDead && Helpers.ObjectHasSpell(trap, this.Name)) < MaxCount)
                     return true;
             }
             return false;
@@ -278,9 +288,13 @@ namespace Allrounder
                 checks++;
             if (IsCurse)
                 checks++;
+            if (IsTotem)
+                checks++;
             if (checks == 0)
                 return true;
 
+            if (IsTotem && ShouldRaiseTotem())
+                trues++;
             if (MinEnemyLifePercent != 0 && Helpers.MainTarget.HealthPercent <= MinEnemyLifePercent)
                 trues++;
             if (Helpers.Me.ManaPercent >= MinManaPercent && MinManaPercent != 0)
@@ -333,7 +347,7 @@ namespace Allrounder
         /// <param name="bIsTrap">Is Skill a Trap</param>
         /// <param name="bIsSummon">Is Skill a Summon</param>
         /// <param name="bIsCurse">Is Skill a Curse</param>
-        public Attack(string strName, int iMinManaPercent = 0, int iLifePercent = 0, int iMobsarround_Distance = 0, int iMobsarround_Count = 0, int iMobsarround_Target = 0, int iEnemyDistance = 0, int iMaxCount = 0, int iEnemyHPPercent = 0, bool bCheckForMobsarround = false, bool bOnlyBosses = false, bool bIsTrap = false, bool bIsSummon = false, bool bIsCurse = false)
+        public Attack(string strName, int iMinManaPercent = 0, int iLifePercent = 0, int iMobsarround_Distance = 0, int iMobsarround_Count = 0, int iMobsarround_Target = 0, int iEnemyDistance = 0, int iMaxCount = 0, int iEnemyHPPercent = 0, bool bCheckForMobsarround = false, bool bOnlyBosses = false, bool bIsTrap = false, bool bIsSummon = false, bool bIsCurse = false, bool bIsTotem = true)
         {
             this.Name = strName;
             this.MinManaPercent = iMinManaPercent;
@@ -349,6 +363,7 @@ namespace Allrounder
             this.IsTrap = bIsTrap;
             this.IsSummon = bIsSummon;
             this.IsCurse = bIsCurse;
+            this.IsTotem = bIsTotem;
 
             Helpers.Log.Debug("CustomCR: " + this.Name + " Added to AttackList");
         }
@@ -362,7 +377,7 @@ namespace Allrounder
             string line = null;
             string tmpname = "undefined";
             int manap = 0, lifep = 0, mad = 0, mac = 0, mat = 0, ed = 0, mc = 0, enemylife = 0;
-            bool cfm = false, ob = false, it = false, _is = false, _ic = false;
+            bool cfm = false, ob = false, it = false, _is = false, _ic = false, _it = false;
             while((line = tr.ReadLine()) != null)
             {
                 if(!line.Contains('#'))
@@ -397,7 +412,7 @@ namespace Allrounder
                         mc = Convert.ToInt32(line.Split('=')[1].Trim());
                     if (line.Split('=')[0].Trim().Equals("CheckForMobsarround"))
                     {
-                        if (line.Split('=')[1].Trim().Equals("true"))
+                        if (line.Split('=')[1].Trim().Equals("true") || line.Split('=')[1].Trim().Equals("True"))
                         {
                             cfm = true;
                         }
@@ -408,7 +423,7 @@ namespace Allrounder
                     }
                     if (line.Split('=')[0].Trim().Equals("OnlyBosses"))
                     {
-                        if (line.Split('=')[1].Trim().Equals("true"))
+                        if (line.Split('=')[1].Trim().Equals("true") || line.Split('=')[1].Trim().Equals("True"))
                         {
                             ob = true;
                         }
@@ -419,7 +434,7 @@ namespace Allrounder
                     }
                     if (line.Split('=')[0].Trim().Equals("IsTrap"))
                     {
-                        if (line.Split('=')[1].Trim().Equals("true"))
+                        if (line.Split('=')[1].Trim().Equals("true") || line.Split('=')[1].Trim().Equals("True"))
                         {
                             it = true;
                         }
@@ -430,7 +445,7 @@ namespace Allrounder
                     }
                     if (line.Split('=')[0].Trim().Equals("IsSummon"))
                     {
-                        if (line.Split('=')[1].Trim().Equals("true"))
+                        if (line.Split('=')[1].Trim().Equals("true") || line.Split('=')[1].Trim().Equals("True"))
                         {
                             _is = true;
                         }
@@ -441,7 +456,7 @@ namespace Allrounder
                     }
                     if (line.Split('=')[0].Trim().Equals("IsCurse"))
                     {
-                        if (line.Split('=')[1].Trim().Equals("true"))
+                        if (line.Split('=')[1].Trim().Equals("true") || line.Split('=')[1].Trim().Equals("True"))
                         {
                             _ic = true;
                         }
@@ -450,13 +465,24 @@ namespace Allrounder
                             _ic = false;
                         }
                     }
+                    if (line.Split('=')[0].Trim().Equals("IsTotem"))
+                    {
+                        if (line.Split('=')[1].Trim().Equals("true") || line.Split('=')[1].Trim().Equals("True"))
+                        {
+                            _it = true;
+                        }
+                        else
+                        {
+                            _it = false;
+                        }
+                    }
                     if (line.Equals("CastEnd"))
                     {
                         if (!tmpname.Equals("undefined"))
-                            Allrounder.SpellList.Add(new Attack(tmpname, manap, lifep, mad, mac, mat, ed, mc, enemylife, cfm, ob, it, _is, _ic));
+                            Allrounder.SpellList.Add(new Attack(tmpname, manap, lifep, mad, mac, mat, ed, mc, enemylife, cfm, ob, it, _is, _ic, _it));
                         tmpname = "undefined";
                         manap = 0; lifep = 0; mad = 0; mac = 0; mat = 0; ed = 0; mc = 0; enemylife = 0;
-                        cfm = false; ob = false; it = false; _is = false; _ic = false;
+                        cfm = false; ob = false; it = false; _is = false; _ic = false; _it = false;
                     }
                 }
             }
@@ -491,6 +517,7 @@ namespace Allrounder
             tw.WriteLine("#IsSummon = false");
             tw.WriteLine("#IsTrap = false");
             tw.WriteLine("#IsCurse = false");
+            tw.WriteLine("#IsTotem = false");
             tw.WriteLine("#After a Skill you must Set 'CastEnd' then the CR knows a new Skill begins\n");
 
             tw.WriteLine("#Examples");

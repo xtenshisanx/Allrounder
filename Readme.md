@@ -50,3 +50,5 @@ The working variables for the settingsfile are
 - *Is Skill a Summonskill*
 - (bool) IsCurse
 - *Is Skill a Curse*
+- (bool) IsTotem
+- *Is Skill a Totem*
