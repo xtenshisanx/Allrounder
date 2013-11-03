@@ -22,6 +22,8 @@ The working variables for the settingsfile are
 - *Min Mana for using ManaPotion (Percent) //default: 50*
 - (int) FightDistance
 - *Minimal Distance to fight a enemy //default: 50*
+- (bool) UseQuicksilverFlask
+- *Use the Quicksilver Flask if no enemys are in range(30)*
 - (string) Name
 - *Skillname*
 - (int) MinManaPercent
