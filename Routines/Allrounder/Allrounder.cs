@@ -68,6 +68,14 @@ namespace Allrounder
             }
         }
 
+        public static InventoryItem GetaQuicksilver()
+        {
+            foreach(InventoryItem _item in LokiPoe.Me.Inventory.Flasks.Items)
+                if(_item != null && _item.Name == "Quicksilver Flask" && _item.Flask.CurrentCharges > 0)
+                    return _item;
+            return null;
+        }
+
         public static IEnumerable<InventoryItem> QuicksilverFlasks
         {
             get
@@ -76,7 +84,7 @@ namespace Allrounder
                 IEnumerable<InventoryItem> inv = LokiPoe.Me.Inventory.Flasks.Items;
                 return from item in inv
                        let flask = item.Flask
-                       where flask != null && item.Name == "Quicksilver Flask" && flask.CanUse
+                       where flask != null && item.Name == "Quicksilver Flask" && flask.CurrentCharges > 0
                        select item;
             }
         }
@@ -158,6 +166,10 @@ namespace Allrounder
             }
 
             return false;
+        }
+        public static int NumberOfEnemysNearMe(int distance)
+        {
+            return LokiPoe.EntityManager.OfType<Actor>().Count(enemy => enemy.IsValid && enemy.Reaction == Reaction.Enemy && enemy.Distance <= distance && !enemy.IsDead);
         }
         /// <summary>
         ///     Returns the First Corpse found by the Entitiymanager in given Distance
@@ -383,6 +395,8 @@ namespace Allrounder
                 if(!line.Contains('#'))
                 {
                     line = line.Replace("\"", "");
+                    if (line.Split('=')[0].Trim().Equals("UseAura"))
+                        Allrounder.UseAura = line.Split('=')[1].Trim();
                     if (line.Split('=')[0].Trim().Equals("MinEnemyLifePercent"))
                         if (!line.Split('=')[1].Trim().Equals("0"))
                     if (line.Split('=')[0].Trim().Equals("FightDistance"))
@@ -476,6 +490,18 @@ namespace Allrounder
                             _it = false;
                         }
                     }
+                    if (line.Split('=')[0].Trim().Equals("UseQuicksilverFlask"))
+                    {
+                        if (line.Split('=')[1].Trim().Equals("true") || line.Split('=')[1].Trim().Equals("True"))
+                        {
+                            Allrounder.UseQuicksilverFlask = true;
+                        }
+                        else
+                        {
+                            Allrounder.UseQuicksilverFlask = false;
+                        }
+                    }
+                    
                     if (line.Equals("CastEnd"))
                     {
                         if (!tmpname.Equals("undefined"))
@@ -496,11 +522,11 @@ namespace Allrounder
         {
             TextWriter tw = new StreamWriter(file);
             tw.WriteLine("#Basic Settings");
-            tw.WriteLine("#In this area you could setup your potionusing");
             tw.WriteLine("#FightDistance = 0");
             tw.WriteLine("#PotHealth = 0");
             tw.WriteLine("#PotMana = 0");
-            tw.WriteLine("#Use Quicksilver Flask = false // Work in Progress\n");
+            tw.WriteLine("#UseQuicksilverFlask = false");
+            //tw.WriteLine("#UseAura = AURANAME");
 
             tw.WriteLine("#AttackFields");
             tw.WriteLine("#Name = \"undefined\"");
@@ -563,6 +589,7 @@ namespace Allrounder
         public static int MinManaPercent = 50;
         public static int FightDistance = 50;
         public static bool UseQuicksilverFlask = false;
+        public static string UseAura = "undefined";
         public int MinLife = 0;
         public int MinMana = 0;
         #endregion
@@ -580,8 +607,9 @@ namespace Allrounder
         public override void Initialize()
         {
             Fight = new PrioritySelector();
-            Loki.Bot.BotMain.OnStart += OnStart;
+            BotMain.OnStart += OnStart;
             BotMain.OnStop += OnStop;
+            BotMain.OnTick += Pulse;
             Log.Debug("Allrounder by xTenshiSanx has been loaded");
         }
         void OnStart(IBot bot)
@@ -605,6 +633,13 @@ namespace Allrounder
             SpellList = new List<Attack>();
             _started = false;
         }
+        void Pulse(IBot bot)
+        {
+            ///Drink Quicksilver Flask
+            if(UseQuicksilverFlask && !LokiPoe.Me.IsInTown && LokiPoe.IsInGame)
+                if (Helpers.NumberOfEnemysNearMe(30) == 0 && (Helpers.GetaQuicksilver() != null && Helpers.GetaQuicksilver().Flask.CanUse) && !Helpers.Me.HasAura("flask_utility_sprint"))
+                    Helpers.GetaQuicksilver().Use();
+        }
         private void CheckForSettingsfile()
         {
             string Filename = Helpers.Me.Name + ".cfg";
@@ -626,6 +661,22 @@ namespace Allrounder
         #endregion
 
         #region Combat
+        private Composite QuicksilverBot()
+        {
+            return new PrioritySelector(
+                new Decorator(ret => Helpers.NumberOfMobsNear(Helpers.Me, 50, 2) && Helpers.QuicksilverFlasks.Count() != 0 && !Helpers.Me.HasAura("flask_utility_sprint"),
+                new Action(ret =>
+                {
+                    Helpers.QuicksilverFlasks.First().Use();
+                    Helpers._flaskCd.Reset();
+                }))
+            );
+        }
+        private Composite CheckForAura()
+        {
+            return new PrioritySelector(
+                Helpers.Cast(UseAura, ret => !Helpers.Me.HasAura(UseAura) && !UseAura.Equals("undefined") && Helpers.Me.ManaPercent >= 50));
+        }
         private Composite FlaskBot()
         {
             return new PrioritySelector(
@@ -645,7 +696,7 @@ namespace Allrounder
         }
         private Composite BuffBot()
         {
-            return new PrioritySelector();
+            return new PrioritySelector( );
         }
         private Composite CombatBot()
         {
