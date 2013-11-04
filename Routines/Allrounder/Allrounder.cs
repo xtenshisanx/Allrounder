@@ -240,12 +240,12 @@ namespace Allrounder
         /// <returns></returns>
         public bool ShouldRaiseMinions()
         {
-            if (this.Name.Equals("Raise Zombie") && LokiPoe.EntityManager.OfType<Actor>().Count(zombies => zombies.IsValid && !zombies.IsDead && zombies.Reaction == Reaction.Friendly && zombies.Name == "Raised Zombie") < MaxCount && Helpers.GetCorpsesNear(30) > 2)
+            if (this.Name.Equals("Raise Zombie") && LokiPoe.EntityManager.OfType<Actor>().Count(zombies => zombies.IsValid && !zombies.IsDead && zombies.Reaction == Reaction.Friendly && zombies.Name == "Raised Zombie") != MaxCount && Helpers.GetCorpsesNear(30) > 2)
             {
                 return true;
             }
 
-            if (this.Name.Equals("Raise Spectre") && LokiPoe.EntityManager.OfType<Actor>().Count(spectre => spectre.IsValid && !spectre.IsDead && spectre.Reaction == Reaction.Friendly && spectre.HasAura("Spectral")) < MaxCount && Helpers.GetCorpsesNear(30) > 2)
+            if (this.Name.Equals("Raise Spectre") && LokiPoe.EntityManager.OfType<Actor>().Count(spectre => spectre.IsValid && !spectre.IsDead && spectre.Reaction == Reaction.Friendly && spectre.HasAura("Spectral")) != MaxCount && Helpers.GetCorpsesNear(30) > 2)
             {
                 return true;
             }
