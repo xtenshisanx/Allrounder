@@ -257,11 +257,8 @@ namespace Allrounder
         /// <returns></returns>
         public bool ShouldThrowTrap()
         {
-            if(this.Name.Contains("Trap"))
-            {
-                if (LokiPoe.EntityManager.OfType<Actor>().Count(trap => trap.IsValid && !trap.IsDead && Helpers.ObjectHasSpell(trap, this.Name)) < MaxCount)
-                    return true;
-            }
+            if (LokiPoe.EntityManager.OfType<Actor>().Count(trap => trap.IsValid && !trap.IsDead && Helpers.ObjectHasSpell(trap, this.Name)) < MaxCount)
+                return true;
             return false;
         }
         /// <summary>
