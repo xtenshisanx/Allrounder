@@ -153,7 +153,7 @@ namespace Allrounder
             tw.WriteLine("#FightDistance = 0");
             tw.WriteLine("#PotHealth = 0");
             tw.WriteLine("#PotMana = 0");
-            tw.WriteLine("UseQuicksilverFlask_EnemyDistance = 0 //Distance to check for Enemys");
+            tw.WriteLine("#UseQuicksilverFlask_EnemyDistance = 0 //Distance to check for Enemys");
             tw.WriteLine("#UseQuicksilverFlask = false");
             //tw.WriteLine("#UseAura = AURANAME");
 
@@ -280,7 +280,7 @@ namespace Allrounder
             else
             {
                 Variables.Log.Debug("File " + Folder + Filename + " dosnt exists");
-                ReadConfig(Folder + Filename);
+                CreateConfig(Folder + Filename);
                 Variables.Log.Debug("Please Check your Character-Settingsfile in " + Folder);
                 Variables.Log.Debug("And add your spells like in the example");
                 BotMain.Stop("First time use");
@@ -321,6 +321,36 @@ namespace Allrounder
                 }
 
                 if (mob.Position.Distance(mpos) < distance && !mob.IsDead)
+                {
+                    curCount++;
+                }
+
+                if (curCount >= count)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        public static bool NumberOfEnemysNear(PoEObject Target, float distance, int count)
+        {
+            if (Target == null)
+            {
+                return false;
+            }
+
+            Vector2i mpos = Target.Position;
+
+            int curCount = 0;
+            foreach (Monster mob in Targeting.Combat.Targets)
+            {
+                if (mob.ID == Target.ID)
+                {
+                    continue;
+                }
+
+                if (mob.Position.Distance(mpos) < distance && !mob.IsDead && mob.Reaction == Reaction.Enemy)
                 {
                     curCount++;
                 }
@@ -470,9 +500,9 @@ namespace Allrounder
             if (this.MinEnemyLifePercent != 0 && Variables.MainTarget.HealthPercent >= this.MinEnemyLifePercent)
                 Trues++;
             if (this.Mobsarround_Distance != 0)
-                if (Mobsarround_Target == 1 && Functions.NumberOfMobsNear(LokiPoe.Me, Mobsarround_Distance, Mobsarround_Count))
+                if (Mobsarround_Target == 1 && Functions.NumberOfEnemysNear(LokiPoe.Me, Mobsarround_Distance, Mobsarround_Count))
                     Trues++;
-                else if (Mobsarround_Target == 0 && Functions.NumberOfMobsNear(Variables.MainTarget, Mobsarround_Distance, Mobsarround_Count))
+                else if (Mobsarround_Target == 0 && Functions.NumberOfEnemysNear(Variables.MainTarget, Mobsarround_Distance, Mobsarround_Count))
                     Trues++;
 
             if (this.EnemyDistance != 0 && Variables.MainTarget.Distance <= this.EnemyDistance)
