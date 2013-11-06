@@ -398,12 +398,12 @@ namespace Allrounder
         }
         public bool ShouldRaiseMinions()
         {
-            if (this.Name.Equals("Raise Zombie") && LokiPoe.EntityManager.OfType<Actor>().Count(zombies => zombies.IsValid && !zombies.IsDead && zombies.Reaction == Reaction.Friendly && zombies.Name == "Raised Zombie") != MaxCount && Functions.GetCorpsesNear(30) > 2)
+            if (this.Name.Equals("Raise Zombie") && LokiPoe.EntityManager.OfType<Actor>().Count(zombies => zombies.IsValid && !zombies.IsDead && zombies.Reaction == Reaction.Friendly && zombies.Name == "Raised Zombie") != MaxCount && Functions.GetCorpsesNear(30) > 0)
             {
                 return true;
             }
 
-            if (this.Name.Equals("Raise Spectre") && LokiPoe.EntityManager.OfType<Actor>().Count(spectre => spectre.IsValid && !spectre.IsDead && spectre.Reaction == Reaction.Friendly && spectre.HasAura("Spectral")) != MaxCount && Functions.GetCorpsesNear(30) > 2)
+            if (this.Name.Equals("Raise Spectre") && LokiPoe.EntityManager.OfType<Actor>().Count(spectre => spectre.IsValid && !spectre.IsDead && spectre.Reaction == Reaction.Friendly && spectre.HasAura("Spectral")) != MaxCount && Functions.GetCorpsesNear(30) > 0)
             {
                 return true;
             }
@@ -443,7 +443,7 @@ namespace Allrounder
                 Truechecks++;
             if (this.EnemyDistance != 0)
                 Truechecks++;
-            if (this.MaxCount != 0)
+            if (this.MaxCount != 0 && !this.IsTrap && !this.IsSummon && !this.IsTotem)
                 Truechecks++;
             //Bools
             if (this.OnlyMobWithoutShield)
@@ -501,6 +501,7 @@ namespace Allrounder
             if (Variables.MainTarget.Rarity >= Rarity.Rare && OnlyBosses)
                 Trues++;
 
+            Variables.Log.Debug("CanCast(" + this.Name + ") Trues: " + Trues.ToString() + " TrueChecks: " + Truechecks.ToString());
             if (Trues >= Truechecks && !Variables.Me.IsAbilityCooldownActive)
             {
                 CurrentCount++;
@@ -540,12 +541,12 @@ namespace Allrounder
                         if (atk.IsSummon)
                         {
                             Variables.Fight.AddChild(Functions.Cast(atk.Name, ret => Functions.GetCorpseNear(30).Position, ret => atk.CanCast()));
-                            Log.Debug("OnStart(): Skill " + atk.Name + " of Type " + atk.Type);
+                            Log.Debug("OnStart(): Added Skill " + atk.Name + " of Type " + atk.Type);
                         }
                         else
                         {
                             Variables.Fight.AddChild(Functions.Cast(atk.Name, ret => atk.CanCast()));
-                            Log.Debug("OnStart(): Skill " + atk.Name + " of Type " + atk.Type);
+                            Log.Debug("OnStart(): Added Skill " + atk.Name + " of Type " + atk.Type);
                         }
                     }
                     Log.Debug("Allrounder(OnStart)Fight.Count: " + Variables.Fight.Children.Count);
