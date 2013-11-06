@@ -335,35 +335,8 @@ namespace Allrounder
         }
         public static bool NumberOfEnemysNear(PoEObject Target, float distance, int count)
         {
-            if (Target == null)
-            {
-                return false;
-            }
-
-            Vector2i mpos = Target.Position;
-
-            int curCount = 0;
-            foreach (Monster mob in Targeting.Combat.Targets)
-            {
-                if (mob.ID == Target.ID)
-                {
-                    continue;
-                }
-
-                if (mob.Position.Distance(mpos) < distance && !mob.IsDead && mob.Reaction == Reaction.Enemy)
-                {
-                    curCount++;
-                }
-
-                if (curCount >= count)
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return LokiPoe.EntityManager.OfType<Actor>().Count(a => !a.IsDead && !a.IsFriendly && a.Position.Distance(Target.Position) <= distance) >= count;
         }
-
     }
     public class Settings
     {
@@ -460,6 +433,7 @@ namespace Allrounder
         }
         public bool CanCast()
         {
+            Variables.Log.Debug("CanCast(" + this.Name + ")");
             int Truechecks = 0;
             int Trues = 0;
             //Ints
@@ -499,12 +473,8 @@ namespace Allrounder
                 Trues++;
             if (this.MinEnemyLifePercent != 0 && Variables.MainTarget.HealthPercent >= this.MinEnemyLifePercent)
                 Trues++;
-            if (this.Mobsarround_Distance != 0)
-                if (Mobsarround_Target == 1 && Functions.NumberOfEnemysNear(LokiPoe.Me, Mobsarround_Distance, Mobsarround_Count))
-                    Trues++;
-                else if (Mobsarround_Target == 0 && Functions.NumberOfEnemysNear(Variables.MainTarget, Mobsarround_Distance, Mobsarround_Count))
-                    Trues++;
-
+            if (this.Mobsarround_Distance != 0 && (Mobsarround_Target == 1 && Functions.NumberOfEnemysNear(LokiPoe.Me, Mobsarround_Distance, Mobsarround_Count) || Mobsarround_Target == 0 && Functions.NumberOfEnemysNear(Variables.MainTarget, Mobsarround_Distance, Mobsarround_Count)))
+                Trues++;
             if (this.EnemyDistance != 0 && Variables.MainTarget.Distance <= this.EnemyDistance)
                 Trues++;
             //foreach (Aura _aura in Variables.MainTarget.Auras)
@@ -531,7 +501,7 @@ namespace Allrounder
             if (Variables.MainTarget.Rarity >= Rarity.Rare && OnlyBosses)
                 Trues++;
 
-            //Variables.Log.Debug("CanCast(" + this.Name + ") Trues: " + Trues.ToString() + " TrueChecks: " + Truechecks.ToString());
+            Variables.Log.Debug("CanCast(" + this.Name + ") Trues: " + Trues.ToString() + " TrueChecks: " + Truechecks.ToString());
             if (Trues >= Truechecks && !Variables.Me.IsAbilityCooldownActive)
             {
                 CurrentCount++;
