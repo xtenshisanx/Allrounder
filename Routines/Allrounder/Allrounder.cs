@@ -398,12 +398,12 @@ namespace Allrounder
         }
         public bool ShouldRaiseMinions()
         {
-            if (this.Name.Equals("Raise Zombie") && LokiPoe.EntityManager.OfType<Actor>().Count(zombies => zombies.IsValid && !zombies.IsDead && zombies.Reaction == Reaction.Friendly && zombies.Name == "Raised Zombie") != MaxCount && Functions.GetCorpsesNear(30) > 0)
+            if (this.Name.Equals("Raise Zombie") && LokiPoe.EntityManager.OfType<Actor>().Count(zombies => zombies.IsValid && !zombies.IsDead && zombies.Reaction == Reaction.Friendly && zombies.Name == "Raised Zombie") != MaxCount && Functions.GetCorpsesNear(60) > 0)
             {
                 return true;
             }
 
-            if (this.Name.Equals("Raise Spectre") && LokiPoe.EntityManager.OfType<Actor>().Count(spectre => spectre.IsValid && !spectre.IsDead && spectre.Reaction == Reaction.Friendly && spectre.HasAura("Spectral")) != MaxCount && Functions.GetCorpsesNear(30) > 0)
+            if (this.Name.Equals("Raise Spectre") && LokiPoe.EntityManager.OfType<Actor>().Count(spectre => spectre.IsValid && !spectre.IsDead && spectre.Reaction == Reaction.Friendly && spectre.HasAura("Spectral")) != MaxCount && Functions.GetCorpsesNear(60) > 0)
             {
                 return true;
             }
@@ -540,7 +540,7 @@ namespace Allrounder
                     {
                         if (atk.IsSummon)
                         {
-                            Variables.Fight.AddChild(Functions.Cast(atk.Name, ret => Functions.GetCorpseNear(30).Position, ret => atk.CanCast()));
+                            Variables.Fight.AddChild(Functions.Cast(atk.Name, ret => Functions.GetCorpseNear(60).Position, ret => atk.CanCast()));
                             Log.Debug("OnStart(): Added Skill " + atk.Name + " of Type " + atk.Type);
                         }
                         else
