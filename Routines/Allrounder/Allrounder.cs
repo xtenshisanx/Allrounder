@@ -501,7 +501,7 @@ namespace Allrounder
             if (Variables.MainTarget.Rarity >= Rarity.Rare && OnlyBosses)
                 Trues++;
 
-            Variables.Log.Debug("CanCast(" + this.Name + ") Trues: " + Trues.ToString() + " TrueChecks: " + Truechecks.ToString());
+            //Variables.Log.Debug("CanCast(" + this.Name + ") Trues: " + Trues.ToString() + " TrueChecks: " + Truechecks.ToString());
             if (Trues >= Truechecks && !Variables.Me.IsAbilityCooldownActive)
             {
                 CurrentCount++;
