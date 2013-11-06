@@ -387,6 +387,23 @@ namespace Allrounder
         public Skill(string _name)
         {
             this.Name = _name;
+            this.MinManaPercent = 0;
+            this.MinLifePercent = 0;
+            this.MinEnemyLifePercent = 0;
+            this.Mobsarround_Distance = 0;
+            this.Mobsarround_Count = 0;
+            this.Mobsarround_Target = 0;
+            this.EnemyDistance = 0;
+            this.MaxCount = 0;
+            this.CurrentCount = 0;
+
+            this.OnlyMobWithoutShield= false;
+            this.OnlyBosses= false;
+            this.IsTrap= false;
+            this.IsSummon= false;
+            this.IsCurse= false;
+            this.IsTotem= false;
+            this.IsRanged= false;
         }
 
         /// <summary>
@@ -433,7 +450,7 @@ namespace Allrounder
         }
         public bool CanCast()
         {
-            Variables.Log.Debug("CanCast(" + this.Name + ")");
+            //Variables.Log.Debug("CanCast(" + this.Name + ")");
             int Truechecks = 0;
             int Trues = 0;
             //Ints
@@ -501,7 +518,7 @@ namespace Allrounder
             if (Variables.MainTarget.Rarity >= Rarity.Rare && OnlyBosses)
                 Trues++;
 
-            Variables.Log.Debug("CanCast(" + this.Name + ") Trues: " + Trues.ToString() + " TrueChecks: " + Truechecks.ToString());
+            //Variables.Log.Debug("CanCast(" + this.Name + ") Trues: " + Trues.ToString() + " TrueChecks: " + Truechecks.ToString());
             if (Trues >= Truechecks && !Variables.Me.IsAbilityCooldownActive)
             {
                 CurrentCount++;
