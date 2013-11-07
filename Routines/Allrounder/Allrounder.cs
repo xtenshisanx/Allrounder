@@ -166,6 +166,7 @@ namespace Allrounder
             tw.WriteLine("#Mobsarround_Count = 0");
             tw.WriteLine("#Mobsarround_Target = 0 // 0 -> Main Target / 1 -> Me");
             tw.WriteLine("#EnemyDistance = 0");
+            tw.WriteLine("#EnemyinDistance = 0");
             tw.WriteLine("#MaxCount = 0 // For Raising/Trap Skills -> MaxCount of Minions/Traps");
             tw.WriteLine("#OnlyBosses = false");
             tw.WriteLine("#IsSummon = false");
@@ -246,6 +247,8 @@ namespace Allrounder
                         Variables.SkillList[Skillnumber].Mobsarround_Target = int.Parse(line.Split('=')[1].Trim());
                     if (line.Split('=')[0].Trim().Equals("EnemyDistance"))
                         Variables.SkillList[Skillnumber].EnemyDistance = int.Parse(line.Split('=')[1].Trim());
+                    if (line.Split('=')[0].Trim().Equals("EnemyinDistance"))
+                        Variables.SkillList[Skillnumber].EnemyinDistance = int.Parse(line.Split('=')[1].Trim());
                     if (line.Split('=')[0].Trim().Equals("MaxCount"))
                         Variables.SkillList[Skillnumber].MaxCount = int.Parse(line.Split('=')[1].Trim());
                     if (line.Split('=')[0].Trim().Equals("OnlyMobWithoutShield"))
@@ -372,6 +375,7 @@ namespace Allrounder
         public int Mobsarround_Distance { get; set; }
         public int Mobsarround_Count { get; set; }
         public int Mobsarround_Target { get; set; }
+        public int EnemyinDistance { get; set; }
         public int EnemyDistance { get; set; }
         public int MaxCount { get; set; }
         public int CurrentCount { get; set; }
@@ -393,6 +397,7 @@ namespace Allrounder
             this.Mobsarround_Distance = 0;
             this.Mobsarround_Count = 0;
             this.Mobsarround_Target = 0;
+            this.EnemyinDistance = 0;
             this.EnemyDistance = 0;
             this.MaxCount = 0;
             this.CurrentCount = 0;
@@ -464,6 +469,8 @@ namespace Allrounder
                 Truechecks++;
             if (this.EnemyDistance != 0)
                 Truechecks++;
+            if (this.EnemyinDistance != 0)
+                Truechecks++;
             if (this.MaxCount != 0 && !this.IsTrap && !this.IsSummon && !this.IsTotem)
                 Truechecks++;
             //Bools
@@ -495,7 +502,9 @@ namespace Allrounder
                 Trues++;
             if (this.Mobsarround_Distance != 0 && (Mobsarround_Target == 1 && Functions.NumberOfEnemysNear(LokiPoe.Me, Mobsarround_Distance, Mobsarround_Count) || Mobsarround_Target == 0 && Functions.NumberOfEnemysNear(Variables.MainTarget, Mobsarround_Distance, Mobsarround_Count)))
                 Trues++;
-            if (this.EnemyDistance != 0 && Variables.MainTarget.Distance <= this.EnemyDistance)
+            if (this.EnemyinDistance != 0 && Variables.MainTarget.Distance <= this.EnemyinDistance)
+                Trues++;
+            if (this.EnemyDistance != 0 && Variables.MainTarget.Distance >= this.EnemyDistance)
                 Trues++;
             //foreach (Aura _aura in Variables.MainTarget.Auras)
                 //Variables.Log.Debug(_aura.Name);
