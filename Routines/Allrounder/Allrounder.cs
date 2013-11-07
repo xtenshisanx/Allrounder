@@ -482,7 +482,10 @@ namespace Allrounder
             if (this.IsRanged)
                 Truechecks++;
             if (Truechecks == 0)
+            {
+                Variables.Log.Debug("Allrounder(Cast): " + this.Name);
                 return true;
+            }
             //Trues
             if (this.MinManaPercent != 0 && Variables.Me.ManaPercent >= this.MinManaPercent)
                 Trues++;
@@ -518,10 +521,9 @@ namespace Allrounder
             if (Variables.MainTarget.Rarity >= Rarity.Rare && OnlyBosses)
                 Trues++;
 
-            //Variables.Log.Debug("CanCast(" + this.Name + ") Trues: " + Trues.ToString() + " TrueChecks: " + Truechecks.ToString());
             if (Trues >= Truechecks && !Variables.Me.IsAbilityCooldownActive)
             {
-                CurrentCount++;
+                Variables.Log.Debug("Allrounder(Cast): " + this.Name);
                 return true;
             }
             return false;
@@ -552,21 +554,22 @@ namespace Allrounder
             {
                 if (!Variables.IsStarted)
                 {
+                    Log.Debug("Allrounder by xTenshiSanx has been started");
+                    Log.Debug("Loading Skills...");
                     Functions.CheckForConfig();
                     foreach (Skill atk in Variables.SkillList)
                     {
                         if (atk.IsSummon)
                         {
                             Variables.Fight.AddChild(Functions.Cast(atk.Name, ret => Functions.GetCorpseNear(60).Position, ret => atk.CanCast()));
-                            Log.Debug("OnStart(): Added Skill " + atk.Name + " of Type " + atk.Type);
+                            Log.Debug("Allrounder(OnStart): Added Skill " + atk.Name + " of Type " + atk.Type);
                         }
                         else
                         {
                             Variables.Fight.AddChild(Functions.Cast(atk.Name, ret => atk.CanCast()));
-                            Log.Debug("OnStart(): Added Skill " + atk.Name + " of Type " + atk.Type);
+                            Log.Debug("Allrounder(OnStart): Added Skill " + atk.Name + " of Type " + atk.Type);
                         }
                     }
-                    Log.Debug("Allrounder(OnStart)Fight.Count: " + Variables.Fight.Children.Count);
                     Variables.IsStarted = true;
                 }
             }
@@ -591,11 +594,6 @@ namespace Allrounder
                     _skill.CurrentCount = 0;
                 }
             }
-
-            ///Drink Quicksilver Flask
-            if (Settings.UseQuicksilverFlask && !LokiPoe.Me.IsInTown && LokiPoe.IsInGame)
-                if (Functions.NumberOfEnemysNearMe(Settings.UseQuicksilverFlask_EnemyDistance) == 0 && (Variables.GetaQuicksilver() != null && Variables.GetaQuicksilver().Flask.CanUse) && !Variables.Me.HasAura("flask_utility_sprint"))
-                    Variables.GetaQuicksilver().Use();
         }
         private Composite FlaskBot()
         {
