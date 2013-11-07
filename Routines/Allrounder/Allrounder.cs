@@ -259,7 +259,7 @@ namespace Allrounder
                     if (line.Split('=')[0].Trim().Equals("IsCurse"))
                         Variables.SkillList[Skillnumber].IsCurse = Boolean.Parse(line.Split('=')[1].Trim());
                     if (line.Split('=')[0].Trim().Equals("IsTotem"))
-                        Variables.SkillList[Skillnumber].IsCurse = Boolean.Parse(line.Split('=')[1].Trim());
+                        Variables.SkillList[Skillnumber].IsTotem = Boolean.Parse(line.Split('=')[1].Trim());
                     if (line.Split('=')[0].Trim().Equals("IsRanged"))
                         Variables.SkillList[Skillnumber].IsRanged = Boolean.Parse(line.Split('=')[1].Trim());
                     if (line.Split('=')[0].Trim().Equals("CastEnd"))
@@ -500,6 +500,8 @@ namespace Allrounder
                 Trues++;
             if (IsCurse && ShouldCastCurse())
                 Trues++;
+            if (this.IsTotem && ShouldRaiseTotem())
+                Trues++;
             if (this.MaxCount != 0)
             {
                 //TrapCheck
@@ -509,8 +511,6 @@ namespace Allrounder
                 if (this.IsSummon && ShouldRaiseMinions())
                     Trues++;
                 //TotemCheck
-                if (this.IsTotem && ShouldRaiseTotem())
-                    Trues++;
                 //AttackCheck
                 if (!this.IsTrap && !this.IsSummon && !this.IsTotem && CurrentCount != MaxCount)
                     Trues++;
