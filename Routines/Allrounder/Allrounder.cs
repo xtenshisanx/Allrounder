@@ -247,7 +247,22 @@ namespace Allrounder
                     if (line.Split('=')[0].Trim().Equals("Mobsarround_Count"))
                         Variables.SkillList[Skillnumber].Mobsarround_Count = int.Parse(line.Split('=')[1].Trim());
                     if (line.Split('=')[0].Trim().Equals("Mobsarround_Target"))
-                        Variables.SkillList[Skillnumber].Mobsarround_Target = int.Parse(line.Split('=')[1].Trim());
+                    {
+                        if (line.Split('=')[1].Trim().ToLower().Equals("me"))
+                        {
+                            Variables.SkillList[Skillnumber].Mobsarround_Target = 1;
+                            continue;
+                        }
+                        if (line.Split('=')[1].Trim().ToLower().Equals("maintarget"))
+                        {
+                            Variables.SkillList[Skillnumber].Mobsarround_Target = 0;
+                            continue;
+                        }
+                        if (line.Split('=')[1].Trim().Equals("1"))
+                            Variables.SkillList[Skillnumber].Mobsarround_Target = 1;
+                        if (line.Split('=')[1].Trim().Equals("0"))
+                            Variables.SkillList[Skillnumber].Mobsarround_Target = 0;
+                    }
                     if (line.Split('=')[0].Trim().Equals("EnemyDistance"))
                         Variables.SkillList[Skillnumber].EnemyDistance = int.Parse(line.Split('=')[1].Trim());
                     if (line.Split('=')[0].Trim().Equals("EnemyinDistance"))
