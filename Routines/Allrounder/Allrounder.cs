@@ -102,7 +102,11 @@ namespace Allrounder
                 reqs = ret => true;
             }
 
-            return SpellManager.CreateSpellCastComposite(spell, reqs, ret => Variables.MainTarget);
+            return new PrioritySelector(
+                new Sequence(
+                SpellManager.CreateSpellCastComposite(spell, reqs, ret => Variables.MainTarget),
+                //new WaitContinue(TimeSpan.FromMilliseconds(300), ret => false, new Action(delegate { return RunStatus.Success; })),
+                new Action(delegate { Variables.Log.DebugFormat("Allrounder(Cast): Casted {0}", spell); Variables.SkillList.FirstOrDefault(s => s.Name.Equals(spell)).Cooldown.Reset(); return RunStatus.Failure; })));
         }
         public static Composite Cast(string spell, SpellManager.GetSelection<Vector2i> location, SpellManager.GetSelection<bool> reqs = null)
         {
@@ -113,7 +117,10 @@ namespace Allrounder
                 reqs = ret => true;
             }
 
-            return SpellManager.CreateSpellCastComposite(spell, reqs, location);
+            return new PrioritySelector(
+                new Sequence(
+                SpellManager.CreateSpellCastComposite(spell, reqs, location),
+                new Action(delegate { Variables.Log.DebugFormat("Allrounder(Cast): Casted {0}", spell); Variables.SkillList.FirstOrDefault(s => s.Name.Equals(spell)).Cooldown.Reset(); return RunStatus.Failure; })));
         }
         /// <summary>
         /// Move into LineofSight
@@ -240,13 +247,13 @@ namespace Allrounder
                         Variables.SkillList[Skillnumber].MinManaPercent = int.Parse(line.Split('=')[1].Trim());
                     if (line.Split('=')[0].Trim().Equals("MinLifePercent"))
                         Variables.SkillList[Skillnumber].MinLifePercent = int.Parse(line.Split('=')[1].Trim());
-                    if (line.Split('=')[0].Trim().Equals("MinEnemylifePercent"))
+                    if (line.Split('=')[0].Trim().Equals("MinEnemyLifePercent"))
                         Variables.SkillList[Skillnumber].MinEnemyLifePercent = int.Parse(line.Split('=')[1].Trim());
-                    if (line.Split('=')[0].Trim().Equals("Mobsarround_Distance"))
+                    if (line.Split('=')[0].Trim().Equals("MobsAroundDistance"))
                         Variables.SkillList[Skillnumber].Mobsarround_Distance = int.Parse(line.Split('=')[1].Trim());
-                    if (line.Split('=')[0].Trim().Equals("Mobsarround_Count"))
+                    if (line.Split('=')[0].Trim().Equals("MobsAroundCount"))
                         Variables.SkillList[Skillnumber].Mobsarround_Count = int.Parse(line.Split('=')[1].Trim());
-                    if (line.Split('=')[0].Trim().Equals("Mobsarround_Target"))
+                    if (line.Split('=')[0].Trim().Equals("MobsAroundTarget"))
                     {
                         if (line.Split('=')[1].Trim().ToLower().Equals("me"))
                         {
@@ -283,6 +290,12 @@ namespace Allrounder
                         Variables.SkillList[Skillnumber].IsTotem = Boolean.Parse(line.Split('=')[1].Trim());
                     if (line.Split('=')[0].Trim().Equals("IsRanged"))
                         Variables.SkillList[Skillnumber].IsRanged = Boolean.Parse(line.Split('=')[1].Trim());
+                    if (line.Split('=')[0].Trim().Equals("GeneratesCharges"))
+                        Variables.SkillList[Skillnumber].GeneratesCharges = Boolean.Parse(line.Split('=')[1].Trim());
+                    if (line.Split('=')[0].Trim().Equals("ChargeType"))
+                        Variables.SkillList[Skillnumber].ChargeType = line.Split('=')[1].Trim();
+                    if (line.Split('=')[0].Trim().Equals("KeepChargesUp"))
+                        Variables.SkillList[Skillnumber].KeepChargesUp = Boolean.Parse(line.Split('=')[1].Trim());
                     if (line.Split('=')[0].Trim().Equals("CastEnd"))
                         Skillnumber++;
                 }
@@ -356,7 +369,55 @@ namespace Allrounder
         }
         public static bool NumberOfEnemysNear(PoEObject Target, float distance, int count)
         {
-            return LokiPoe.EntityManager.OfType<Actor>().Count(a => !a.IsDead && !a.IsFriendly && a.Position.Distance(Target.Position) <= distance) >= count;
+            return LokiPoe.EntityManager.OfType<Actor>().Count(a => !a.IsDead && !a.IsFriendly && a.Distance <= distance) >= count;
+        }
+        public static bool HasAura(Actor actor, string auraName, int minCharges = -1, double minSecondsLeft = -1)
+        {
+            Aura aura = actor.Auras.FirstOrDefault(a => a.Name == auraName || a.InternalName == auraName);
+            if (aura == null)
+            {
+                Logger.GetLoggerInstanceForType().Debug("Aura == null");
+                return false;
+            }
+            Logger.GetLoggerInstanceForType().DebugFormat("{0}: charges: {1} TimeLeft: {2}", aura.Name, aura.Charges, aura.TimeLeft);
+            if (minCharges != -1)
+            {
+                if (aura.Charges != minCharges)
+                {
+                    return false;
+                }
+            }
+            if (minSecondsLeft != -1)
+            {
+                if (aura.TimeLeft.TotalSeconds < minSecondsLeft)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+        public static TimeSpan GetSpellCooldown(string _Spellname)
+        {
+            foreach (Spell _spell in LokiPoe.Me.AvailableSpells)
+            {
+                if (_spell.Name != null && !_spell.Name.Equals("") && _spell.Name.Equals(_Spellname))
+                {
+                    Variables.Log.Debug(_spell.UsesAvailable);
+                    return _spell.Cooldown;
+                }
+            }
+            return new TimeSpan();
+        }
+        public static Spell GetSpell(string _Spellname)
+        {
+            foreach (Spell _spell in LokiPoe.Me.AvailableSpells)
+            {
+                if (_spell.Name != null && !_spell.Name.Equals("") && _spell.Name.Equals(_Spellname))
+                {
+                    return _spell;
+                }
+            }
+            return null;
         }
     }
     public class Settings
@@ -387,6 +448,8 @@ namespace Allrounder
                 return "Melee";
             }
         }
+        public string ChargeType { get; set; }
+        
         public int MinManaPercent { get; set; }
         public int MinLifePercent { get; set; }
         public int MinEnemyLifePercent { get; set; }
@@ -397,7 +460,7 @@ namespace Allrounder
         public int EnemyDistance { get; set; }
         public int MaxCount { get; set; }
         public int CurrentCount { get; set; }
-
+        
         public bool OnlyMobWithoutShield { get; set; }
         public bool OnlyBosses { get; set; }
         public bool IsTrap { get; set; }
@@ -405,10 +468,16 @@ namespace Allrounder
         public bool IsCurse { get; set; }
         public bool IsTotem { get; set; }
         public bool IsRanged { get; set; }
+        public bool GeneratesCharges { get; set; }
+        public bool KeepChargesUp { get; set; }
 
+        public WaitTimer Cooldown;
+        public Spell SpellPtr { get { return Functions.GetSpell(this.Name); } }
         public Skill(string _name)
         {
             this.Name = _name;
+            this.Cooldown = new WaitTimer(new TimeSpan(Functions.GetSpellCooldown(this.Name).Ticks));
+            //this.SpellPtr = Functions.GetSpell(this.Name);
             this.MinManaPercent = 0;
             this.MinLifePercent = 0;
             this.MinEnemyLifePercent = 0;
@@ -471,9 +540,41 @@ namespace Allrounder
                 return true;
             return false;
         }
+        public bool ShouldgenerateCharges()
+        {
+            if(this.Name.Equals("Viper Strike"))
+            {
+                Aura ChargesAura = Variables.MainTarget.Auras.FirstOrDefault(aura => aura.InternalName.Equals("viper_strike_orb"));
+                if (ChargesAura == null)
+                    return true;
+                if (ChargesAura.Charges != this.MaxCount)
+                    return true;
+                if (ChargesAura.TimeLeft.TotalSeconds <= 3 && KeepChargesUp)
+                    return true;
+            }
+            if (this.ChargeType.Equals("Frenzy") || this.ChargeType.Equals("Power") || this.ChargeType.Equals("Endurance"))
+            {
+                Aura ChargesAura = LokiPoe.Me.Auras.FirstOrDefault(aura => aura.Name.Equals(this.ChargeType + " Charges") || aura.InternalName.Equals(this.ChargeType.ToLower() + "_charge"));
+                if (ChargesAura == null)
+                {
+                    return true;
+                }
+                if (ChargesAura.Charges != this.MaxCount)
+                    return true;
+                if (ChargesAura.TimeLeft.TotalSeconds <= 3 && KeepChargesUp)
+                    return true;
+            }
+            return false;
+        }
         public bool CanCast()
         {
             Variables.Log.Debug("CanCast(" + this.Name + ") Check for Cast");
+            if(this.SpellPtr.UsesAvailable <= 0)
+                return false;
+            if(!this.Cooldown.IsFinished)
+            {
+                Variables.Log.DebugFormat("This Skill is on Cooldown. Timeleft {0}", this.Cooldown.TimeLeft);
+            }
             int Truechecks = 0;
             int Trues = 0;
             //Ints
@@ -489,9 +590,11 @@ namespace Allrounder
                 Truechecks++;
             if (this.EnemyinDistance != 0)
                 Truechecks++;
-            if (this.MaxCount != 0 && !this.IsTrap && !this.IsSummon && !this.IsTotem)
+            if (this.MaxCount != 0 && !this.IsTrap && !this.IsSummon && !this.IsTotem && !this.GeneratesCharges)
                 Truechecks++;
             //Bools
+            if (this.GeneratesCharges)
+                Truechecks++;
             if (this.OnlyMobWithoutShield)
                 Truechecks++;
             if (this.OnlyBosses)
@@ -511,7 +614,10 @@ namespace Allrounder
                 Variables.Log.Debug("Allrounder(Cast): " + this.Name);
                 return true;
             }
+
             //Trues
+            if (this.GeneratesCharges && ShouldgenerateCharges())
+                Trues++;
             if (this.MinManaPercent != 0 && Variables.Me.ManaPercent >= this.MinManaPercent)
                 Trues++;
             if (this.MinLifePercent != 0 && Variables.Me.HealthPercent >= this.MinLifePercent)
@@ -542,7 +648,7 @@ namespace Allrounder
                     Trues++;
                 //TotemCheck
                 //AttackCheck
-                if (!this.IsTrap && !this.IsSummon && !this.IsTotem && CurrentCount != MaxCount)
+                if (!this.IsTrap && !this.IsSummon && !this.IsTotem && !this.GeneratesCharges && CurrentCount != MaxCount)
                     Trues++;
             }
             if (Variables.MainTarget.Rarity >= Rarity.Rare && OnlyBosses)
@@ -563,7 +669,7 @@ namespace Allrounder
         public override string Name { get { return "Allrounder by xTenshiSanx"; } }
         public override string ToString() { return Name; }
         public override void Dispose() { }
-        public override void OnGuiButtonPress() { new CRConfig.Window().Show(); }
+        public override void OnGuiButtonPress() { new AllrounderSettings().ShowDialog(); }
         public override Composite Combat { get { return CombatBot(); } }
         public override Composite Buff { get { return BuffBot(); } }
         public override void Initialize()
@@ -651,738 +757,6 @@ namespace Allrounder
                 Functions.CreateMoveToRange(Settings.FightDistance),
                 Variables.Fight
             );
-        }
-    }
-}
-namespace CRConfig
-{
-    partial class Window
-    {
-        /// <summary>
-        /// Erforderliche Designervariable.
-        /// </summary>
-        private System.ComponentModel.IContainer components = null;
-
-        /// <summary>
-        /// Verwendete Ressourcen bereinigen.
-        /// </summary>
-        /// <param name="disposing">True, wenn verwaltete Ressourcen gelöscht werden sollen; andernfalls False.</param>
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing && (components != null))
-            {
-                components.Dispose();
-            }
-            base.Dispose(disposing);
-        }
-
-        #region Vom Windows Form-Designer generierter Code
-
-        /// <summary>
-        /// Erforderliche Methode für die Designerunterstützung.
-        /// Der Inhalt der Methode darf nicht mit dem Code-Editor geändert werden.
-        /// </summary>
-        private void InitializeComponent()
-        {
-
-            this.RemoveCurrentSkillButton = new System.Windows.Forms.Button();
-            this.Body = new System.Windows.Forms.TabControl();
-            this.Charactersettings = new System.Windows.Forms.TabPage();
-            this.Skillsettings = new System.Windows.Forms.TabPage();
-            this.MoveCurrentSkillRight = new System.Windows.Forms.Button();
-            this.MoveCurrentSkillLeft = new System.Windows.Forms.Button();
-            this.NewSkillName = new System.Windows.Forms.TextBox();
-            this.NewSkillButton = new System.Windows.Forms.Button();
-            this.Skillbody = new System.Windows.Forms.TabControl();
-            this.label1 = new System.Windows.Forms.Label();
-            this.Savebutton = new System.Windows.Forms.Button();
-            this.PotHealthBox = new System.Windows.Forms.TextBox();
-            this.GeneralSettingsLabel = new System.Windows.Forms.Label();
-            this.PotHealthLabel = new System.Windows.Forms.Label();
-            this.PotManaLabel = new System.Windows.Forms.Label();
-            this.PotManaBox = new System.Windows.Forms.TextBox();
-            this.FightDistanceLabel = new System.Windows.Forms.Label();
-            this.FightDistanceBox = new System.Windows.Forms.TextBox();
-            this.Body.SuspendLayout();
-            this.Charactersettings.SuspendLayout();
-            this.Skillsettings.SuspendLayout();
-            this.SuspendLayout();
-            // 
-            // Body
-            // 
-            this.Body.AllowDrop = true;
-            this.Body.Controls.Add(this.Charactersettings);
-            this.Body.Controls.Add(this.Skillsettings);
-            this.Body.Location = new System.Drawing.Point(12, 39);
-            this.Body.Name = "Body";
-            this.Body.SelectedIndex = 0;
-            this.Body.Size = new System.Drawing.Size(537, 425);
-            this.Body.TabIndex = 0;
-            // 
-            // Charactersettings
-            // 
-            this.Charactersettings.AllowDrop = true;
-            this.Charactersettings.Controls.Add(this.FightDistanceLabel);
-            this.Charactersettings.Controls.Add(this.FightDistanceBox);
-            this.Charactersettings.Controls.Add(this.PotManaLabel);
-            this.Charactersettings.Controls.Add(this.PotManaBox);
-            this.Charactersettings.Controls.Add(this.PotHealthLabel);
-            this.Charactersettings.Controls.Add(this.GeneralSettingsLabel);
-            this.Charactersettings.Controls.Add(this.PotHealthBox);
-            this.Charactersettings.Location = new System.Drawing.Point(4, 22);
-            this.Charactersettings.Name = "Charactersettings";
-            this.Charactersettings.Padding = new System.Windows.Forms.Padding(3);
-            this.Charactersettings.Size = new System.Drawing.Size(529, 399);
-            this.Charactersettings.TabIndex = 0;
-            this.Charactersettings.Text = "Charactersettings";
-            this.Charactersettings.UseVisualStyleBackColor = true;
-            // 
-            // Skillsettings
-            // 
-            this.Skillsettings.Controls.Add(this.MoveCurrentSkillRight);
-            this.Skillsettings.Controls.Add(this.MoveCurrentSkillLeft);
-            this.Skillsettings.Controls.Add(this.RemoveCurrentSkillButton);
-            this.Skillsettings.Controls.Add(this.NewSkillName);
-            this.Skillsettings.Controls.Add(this.NewSkillButton);
-            this.Skillsettings.Controls.Add(this.Skillbody);
-            this.Skillsettings.Location = new System.Drawing.Point(4, 22);
-            this.Skillsettings.Name = "Skillsettings";
-            this.Skillsettings.Padding = new System.Windows.Forms.Padding(3);
-            this.Skillsettings.Size = new System.Drawing.Size(529, 399);
-            this.Skillsettings.TabIndex = 1;
-            this.Skillsettings.Text = "Skillsettings";
-            this.Skillsettings.UseVisualStyleBackColor = true;
-            // 
-            // MoveCurrentSkillRight
-            // 
-            this.MoveCurrentSkillRight.Location = new System.Drawing.Point(73, 333);
-            this.MoveCurrentSkillRight.Name = "MoveCurrentSkillRight";
-            this.MoveCurrentSkillRight.Size = new System.Drawing.Size(60, 60);
-            this.MoveCurrentSkillRight.TabIndex = 32;
-            this.MoveCurrentSkillRight.Text = "Move Current Skill Right";
-            this.MoveCurrentSkillRight.UseVisualStyleBackColor = true;
-            this.MoveCurrentSkillRight.Click += new System.EventHandler(this.MoveSkills);
-            // 
-            // MoveCurrentSkillLeft
-            // 
-            this.MoveCurrentSkillLeft.Location = new System.Drawing.Point(7, 333);
-            this.MoveCurrentSkillLeft.Name = "MoveCurrentSkillLeft";
-            this.MoveCurrentSkillLeft.Size = new System.Drawing.Size(60, 60);
-            this.MoveCurrentSkillLeft.TabIndex = 31;
-            this.MoveCurrentSkillLeft.Text = "Move Current Skill Left";
-            this.MoveCurrentSkillLeft.UseVisualStyleBackColor = true;
-            this.MoveCurrentSkillLeft.Click += new System.EventHandler(this.MoveSkills);
-            // 
-            // NewSkillName
-            // 
-            this.NewSkillName.Location = new System.Drawing.Point(205, 337);
-            this.NewSkillName.Name = "NewSkillName";
-            this.NewSkillName.Size = new System.Drawing.Size(317, 20);
-            this.NewSkillName.TabIndex = 30;
-            // 
-            // NewSkillButton
-            // 
-            this.NewSkillButton.Location = new System.Drawing.Point(205, 363);
-            this.NewSkillButton.Name = "NewSkillButton";
-            this.NewSkillButton.Size = new System.Drawing.Size(317, 30);
-            this.NewSkillButton.TabIndex = 29;
-            this.NewSkillButton.Text = "NewSkill";
-            this.NewSkillButton.UseVisualStyleBackColor = true;
-            this.NewSkillButton.Click += new System.EventHandler(this.NewSkillButton_Click);
-            // 
-            // Skillbody
-            // 
-            this.Skillbody.HotTrack = true;
-            this.Skillbody.Location = new System.Drawing.Point(3, 3);
-            this.Skillbody.Name = "Skillbody";
-            this.Skillbody.SelectedIndex = 0;
-            this.Skillbody.Size = new System.Drawing.Size(523, 315);
-            this.Skillbody.TabIndex = 0;
-            // 
-            // label1
-            // 
-            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.Location = new System.Drawing.Point(12, 16);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(531, 23);
-            this.label1.TabIndex = 1;
-            this.label1.Text = "Charactername";
-            this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
-            // Savebutton
-            // 
-            this.Savebutton.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.Savebutton.Location = new System.Drawing.Point(12, 470);
-            this.Savebutton.Name = "Savebutton";
-            this.Savebutton.Size = new System.Drawing.Size(537, 30);
-            this.Savebutton.TabIndex = 2;
-            this.Savebutton.Text = "Save";
-            this.Savebutton.UseVisualStyleBackColor = true;
-            this.Savebutton.Click += new System.EventHandler(this.Save);
-            // 
-            // RemoveCurrentSkillButton
-            // 
-            this.RemoveCurrentSkillButton.Location = new System.Drawing.Point(139, 333);
-            this.RemoveCurrentSkillButton.Name = "RemoveCurrentSkillButton";
-            this.RemoveCurrentSkillButton.Size = new System.Drawing.Size(60, 60);
-            this.RemoveCurrentSkillButton.TabIndex = 33;
-            this.RemoveCurrentSkillButton.Text = "Remove Current Skill";
-            this.RemoveCurrentSkillButton.UseVisualStyleBackColor = true;
-            this.RemoveCurrentSkillButton.Click += new System.EventHandler(this.RemoveCurrentSkillButton_Click);
-            // 
-            // PotHealthBox
-            // 
-            this.PotHealthBox.Location = new System.Drawing.Point(92, 40);
-            this.PotHealthBox.Name = "PotHealthBox";
-            this.PotHealthBox.Size = new System.Drawing.Size(100, 20);
-            this.PotHealthBox.TabIndex = 0;
-            // 
-            // GeneralSettingsLabel
-            // 
-            this.GeneralSettingsLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.GeneralSettingsLabel.Location = new System.Drawing.Point(6, 14);
-            this.GeneralSettingsLabel.Name = "GeneralSettingsLabel";
-            this.GeneralSettingsLabel.Size = new System.Drawing.Size(186, 23);
-            this.GeneralSettingsLabel.TabIndex = 1;
-            this.GeneralSettingsLabel.Text = "General Settings";
-            this.GeneralSettingsLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
-            // PotHealthLabel
-            // 
-            this.PotHealthLabel.AutoSize = true;
-            this.PotHealthLabel.Location = new System.Drawing.Point(6, 43);
-            this.PotHealthLabel.Name = "PotHealthLabel";
-            this.PotHealthLabel.Size = new System.Drawing.Size(62, 13);
-            this.PotHealthLabel.TabIndex = 2;
-            this.PotHealthLabel.Text = "PotHealth%";
-            // 
-            // PotManaLabel
-            // 
-            this.PotManaLabel.AutoSize = true;
-            this.PotManaLabel.Location = new System.Drawing.Point(6, 69);
-            this.PotManaLabel.Name = "PotManaLabel";
-            this.PotManaLabel.Size = new System.Drawing.Size(58, 13);
-            this.PotManaLabel.TabIndex = 4;
-            this.PotManaLabel.Text = "PotMana%";
-            // 
-            // PotManaBox
-            // 
-            this.PotManaBox.Location = new System.Drawing.Point(92, 66);
-            this.PotManaBox.Name = "PotManaBox";
-            this.PotManaBox.Size = new System.Drawing.Size(100, 20);
-            this.PotManaBox.TabIndex = 3;
-            // 
-            // FightDistanceLabel
-            // 
-            this.FightDistanceLabel.AutoSize = true;
-            this.FightDistanceLabel.Location = new System.Drawing.Point(6, 95);
-            this.FightDistanceLabel.Name = "FightDistanceLabel";
-            this.FightDistanceLabel.Size = new System.Drawing.Size(72, 13);
-            this.FightDistanceLabel.TabIndex = 6;
-            this.FightDistanceLabel.Text = "FightDistance";
-            // 
-            // FightDistanceBox
-            // 
-            this.FightDistanceBox.Location = new System.Drawing.Point(92, 92);
-            this.FightDistanceBox.Name = "FightDistanceBox";
-            this.FightDistanceBox.Size = new System.Drawing.Size(100, 20);
-            this.FightDistanceBox.TabIndex = 5;
-            // 
-            // AllrounderSettings
-            // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(561, 512);
-            this.Controls.Add(this.Savebutton);
-            this.Controls.Add(this.label1);
-            this.Controls.Add(this.Body);
-            this.Name = "AllrounderSettings";
-            this.Text = "Allrounder Settings";
-            this.Body.ResumeLayout(false);
-            this.Charactersettings.ResumeLayout(false);
-            this.Charactersettings.PerformLayout();
-            this.Skillsettings.ResumeLayout(false);
-            this.Skillsettings.PerformLayout();
-            this.ResumeLayout(false);
-
-        }
-
-        #endregion
-
-        private System.Windows.Forms.Button RemoveCurrentSkillButton;
-        private System.Windows.Forms.TabControl Body;
-        private System.Windows.Forms.TabPage Charactersettings;
-        private System.Windows.Forms.TabPage Skillsettings;
-        private System.Windows.Forms.TabControl Skillbody;
-        private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Button Savebutton;
-        private System.Windows.Forms.TextBox NewSkillName;
-        private System.Windows.Forms.Button NewSkillButton;
-        private System.Windows.Forms.Button MoveCurrentSkillRight;
-        private System.Windows.Forms.Button MoveCurrentSkillLeft;
-        private System.Windows.Forms.Label FightDistanceLabel;
-        private System.Windows.Forms.TextBox FightDistanceBox;
-        private System.Windows.Forms.Label PotManaLabel;
-        private System.Windows.Forms.TextBox PotManaBox;
-        private System.Windows.Forms.Label PotHealthLabel;
-        private System.Windows.Forms.Label GeneralSettingsLabel;
-        private System.Windows.Forms.TextBox PotHealthBox;
-    }
-    public partial class Window : Form
-    {
-        public Window()
-        {
-            InitializeComponent();
-            Load();
-        }
-
-        public void Load()
-        {
-            System.IO.StreamReader SR = new System.IO.StreamReader(Loki.Bot.CharacterSettings.SettingsPath + "\\Allrounder\\" + LokiPoe.Me.Name + ".cfg");
-            string line = null;
-            string left = null;
-            string right = null;
-            TabPage current = null;
-            while ((line = SR.ReadLine()) != null)
-            {
-                left = null;
-                right = null;
-                if (line.Split('=')[0].Trim() != null)
-                    left = line.Split('=')[0].Trim();
-                if (left != null && !left.Equals("CastEnd") && !left.Equals("") && !left.Contains('#'))
-                {
-                    
-                    if (line.Split('=')[1].Trim() != null)
-                        right = line.Split('=')[1].Trim();
-                    
-                    if (left.Equals("Name"))
-                    {
-                        this.Skillbody.TabPages.Add(new Attack(right));
-                        current = this.Skillbody.TabPages[right];
-                        continue;
-                    }
-                    if (left.Equals("FightDistance"))
-                    {
-                        this.Charactersettings.Controls["FightDistanceBox"].Text = right;
-                        continue;
-                    }
-
-                    if (left.Equals("PotHealth"))
-                    {
-                        this.PotHealthBox.Text = right;
-                        continue;
-                    }
-                    if (left.Equals("PotMana"))
-                    {
-                        this.Charactersettings.Controls["PotManaBox"].Text = right;
-                        continue;
-                    }
-                    if (!Left.Equals("FightDistance")&&!Left.Equals("PotHealth") && !Left.Equals("PotMana") && this.Skillbody.TabPages[this.Skillbody.TabPages.IndexOf(current)].Controls.Find(left + "Box", true).FirstOrDefault() != null)
-                    {
-                        object temp = null;
-                        if (this.Skillbody.TabPages[this.Skillbody.TabPages.IndexOf(current)].Controls.Find(left + "Box", true).FirstOrDefault().GetType().Name == "TextBox")
-                        {
-                            temp = (TextBox)this.Skillbody.TabPages[this.Skillbody.TabPages.IndexOf(current)].Controls[left + "Box"];
-                            (temp as TextBox).Text = line.Split('=')[1].Trim();
-                            continue;
-                        }
-                        if (this.Skillbody.TabPages[this.Skillbody.TabPages.IndexOf(current)].Controls.Find(left + "Box", true).FirstOrDefault().GetType().Name == "ComboBox")
-                        {
-                            temp = (ComboBox)this.Skillbody.TabPages[this.Skillbody.TabPages.IndexOf(current)].Controls[left + "Box"];
-                            (temp as ComboBox).Text = line.Split('=')[1].Trim();
-                            continue;
-                        }
-                    }
-                    if (right != null && Boolean.Parse(line.Split('=')[1].Trim()))
-                    {
-                        CheckedListBox temp = (CheckedListBox)this.Skillbody.TabPages[this.Skillbody.TabPages.IndexOf(current)].Controls["SkilltypeBox"];
-                        int buttonindex = temp.Items.IndexOf(left);
-                        temp.SetItemChecked(buttonindex, true);
-                        continue;
-                    }
-                }
-            }
-            SR.Close();
-        }
-        public void Save(object sender, EventArgs e)
-        {
-            System.IO.StreamWriter SW = new System.IO.StreamWriter(Loki.Bot.CharacterSettings.SettingsPath + "\\Allrounder\\" + LokiPoe.Me.Name + ".cfg");
-            //SaveSkills
-            foreach (Control _control in Charactersettings.Controls)
-            {
-                if (_control.Name.ToLower().Contains("box") && !_control.Text.Equals("") && !_control.Name.Equals("SkilltypeBox"))
-                    SW.WriteLine("{0} = {1}", _control.Name.Replace("Box", ""), _control.Text);
-            }
-            foreach (TabPage page in this.Skillbody.TabPages)
-            {
-                SW.WriteLine("Name = {0}", page.Text);
-                foreach (Control _control in page.Controls)
-                {
-                    if (_control.Name.ToLower().Contains("box") && !_control.Text.Equals("") && !_control.Name.Equals("SkilltypeBox"))
-                        SW.WriteLine("{0} = {1}", _control.Name.Replace("Box", ""), _control.Text);
-                    if (_control.Name.Equals("SkilltypeBox"))
-                    {
-                        foreach (object item in (_control as CheckedListBox).CheckedItems)
-                        {
-                            SW.WriteLine("{0} = {1}", item, true);
-                        }
-                    }
-                }
-                SW.WriteLine("CastEnd");
-            }
-            SW.Close();
-            if(BotMain.IsRunning)
-            {
-                BotMain.Stop("Allrounder(): Refreshing Skilllist");
-                BotMain.Start();
-            }
-        }
-        private void RemoveCurrentSkillButton_Click(object sender, EventArgs e)
-        {
-            this.Skillbody.TabPages.Remove(this.Skillbody.SelectedTab);
-        }
-        public void NewSkillButton_Click(object sender, EventArgs e)
-        {
-            this.Skillbody.TabPages.Add(new Attack(this.NewSkillName.Text));
-        }
-        public void MoveSkills(object sender, EventArgs e)
-        {
-            int position = this.Skillbody.TabPages.IndexOf(this.Skillbody.SelectedTab);
-            if (position == 0)
-                return;
-            if ((sender as Button).Name.ToLower().Contains("left"))
-            {
-                TabPage Active = this.Skillbody.SelectedTab;
-                TabPage Old = this.Skillbody.TabPages[position - 1];
-                this.Skillbody.TabPages[position - 1] = Active;
-                this.Skillbody.TabPages[position] = Old;
-                this.Skillbody.SelectedTab = this.Skillbody.TabPages[position - 1];
-                this.Update();
-                return;
-            }
-            if ((sender as Button).Name.ToLower().Contains("right"))
-            {
-                if (position + 1 >= this.Skillbody.TabPages.Count)
-                    return;
-                TabPage Active = this.Skillbody.SelectedTab;
-                TabPage Old = this.Skillbody.TabPages[position + 1];
-                this.Skillbody.TabPages[position + 1] = Active;
-                this.Skillbody.TabPages[position] = Old;
-                this.Skillbody.SelectedTab = this.Skillbody.TabPages[position + 1];
-                this.Update();
-                return;
-            }
-        }
-    }
-    partial class Attack : System.Windows.Forms.TabPage
-    {
-        // 
-        // DefaultAttack
-        // 
-        private System.Windows.Forms.ComboBox Mobsarround_TargetBox;
-        private System.Windows.Forms.Label MobCheckTagetLabel;
-        private System.Windows.Forms.Label MobcheckLabel;
-        private System.Windows.Forms.Label CountLabel;
-        private System.Windows.Forms.Label DistancesLabel;
-        private System.Windows.Forms.Label LifeManaSpecificLabel;
-        private System.Windows.Forms.TextBox Mobsarround_CountBox;
-        private System.Windows.Forms.Label MobCheckCountLabel;
-        private System.Windows.Forms.TextBox Mobsarround_DistanceBox;
-        private System.Windows.Forms.Label MobCheckDistanceLabel;
-        private System.Windows.Forms.TextBox MaxCountBox;
-        private System.Windows.Forms.Label MaxCountLabel;
-        private System.Windows.Forms.TextBox EnemyDistanceBox;
-        private System.Windows.Forms.Label EnemyDistanceLabel;
-        private System.Windows.Forms.TextBox EnemyinDistanceBox;
-        private System.Windows.Forms.Label EnemyInDistanceLabel;
-        private System.Windows.Forms.TextBox MinEnemyLifePercentBox;
-        private System.Windows.Forms.Label MinEnemyLifeLabel;
-        private System.Windows.Forms.TextBox MinLifePercentBox;
-        private System.Windows.Forms.Label MinLifeLabel;
-        private System.Windows.Forms.TextBox MinManaPercentBox;
-        private System.Windows.Forms.Label MinManaLabel;
-        private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Button Savebutton;
-        private System.Windows.Forms.CheckedListBox SkilltypeBox;
-        private System.Windows.Forms.Label SkilltypeLabel;
-        public Attack(string _Title)
-        {
-
-            this.SkilltypeBox = new System.Windows.Forms.CheckedListBox();
-            this.SkilltypeLabel = new System.Windows.Forms.Label();
-            this.Mobsarround_TargetBox = new System.Windows.Forms.ComboBox();
-            this.MobCheckTagetLabel = new System.Windows.Forms.Label();
-            this.MobcheckLabel = new System.Windows.Forms.Label();
-            this.CountLabel = new System.Windows.Forms.Label();
-            this.DistancesLabel = new System.Windows.Forms.Label();
-            this.LifeManaSpecificLabel = new System.Windows.Forms.Label();
-            this.Mobsarround_CountBox = new System.Windows.Forms.TextBox();
-            this.MobCheckCountLabel = new System.Windows.Forms.Label();
-            this.Mobsarround_DistanceBox = new System.Windows.Forms.TextBox();
-            this.MobCheckDistanceLabel = new System.Windows.Forms.Label();
-            this.MaxCountBox = new System.Windows.Forms.TextBox();
-            this.MaxCountLabel = new System.Windows.Forms.Label();
-            this.EnemyDistanceBox = new System.Windows.Forms.TextBox();
-            this.EnemyDistanceLabel = new System.Windows.Forms.Label();
-            this.EnemyinDistanceBox = new System.Windows.Forms.TextBox();
-            this.EnemyInDistanceLabel = new System.Windows.Forms.Label();
-            this.MinEnemyLifePercentBox = new System.Windows.Forms.TextBox();
-            this.MinEnemyLifeLabel = new System.Windows.Forms.Label();
-            this.MinLifePercentBox = new System.Windows.Forms.TextBox();
-            this.MinLifeLabel = new System.Windows.Forms.Label();
-            this.MinManaPercentBox = new System.Windows.Forms.TextBox();
-            this.MinManaLabel = new System.Windows.Forms.Label();
-            this.label1 = new System.Windows.Forms.Label();
-            this.Savebutton = new System.Windows.Forms.Button();
-
-            this.Controls.Add(this.SkilltypeBox);
-            this.Controls.Add(this.SkilltypeLabel);
-            this.Controls.Add(this.Mobsarround_TargetBox);
-            this.Controls.Add(this.MobCheckTagetLabel);
-            this.Controls.Add(this.MobcheckLabel);
-            this.Controls.Add(this.CountLabel);
-            this.Controls.Add(this.DistancesLabel);
-            this.Controls.Add(this.LifeManaSpecificLabel);
-            this.Controls.Add(this.Mobsarround_CountBox);
-            this.Controls.Add(this.MobCheckCountLabel);
-            this.Controls.Add(this.Mobsarround_DistanceBox);
-            this.Controls.Add(this.MobCheckDistanceLabel);
-            this.Controls.Add(this.MaxCountBox);
-            this.Controls.Add(this.MaxCountLabel);
-            this.Controls.Add(this.EnemyDistanceBox);
-            this.Controls.Add(this.EnemyDistanceLabel);
-            this.Controls.Add(this.EnemyinDistanceBox);
-            this.Controls.Add(this.EnemyInDistanceLabel);
-            this.Controls.Add(this.MinEnemyLifePercentBox);
-            this.Controls.Add(this.MinEnemyLifeLabel);
-            this.Controls.Add(this.MinLifePercentBox);
-            this.Controls.Add(this.MinLifeLabel);
-            this.Controls.Add(this.MinManaPercentBox);
-            this.Controls.Add(this.MinManaLabel);
-
-            // 
-            // SkilltypeBox
-            // 
-            this.SkilltypeBox.FormattingEnabled = true;
-            this.SkilltypeBox.Items.AddRange(new object[] {
-            "IsTrap",
-            "IsSummon",
-            "IsCurse",
-            "IsTotem",
-            "IsRanged"});
-            this.SkilltypeBox.Location = new System.Drawing.Point(271, 167);
-            this.SkilltypeBox.Name = "SkilltypeBox";
-            this.SkilltypeBox.Size = new System.Drawing.Size(215, 79);
-            this.SkilltypeBox.TabIndex = 24;
-            // 
-            // SkilltypeLabel
-            // 
-            this.SkilltypeLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.SkilltypeLabel.Location = new System.Drawing.Point(268, 146);
-            this.SkilltypeLabel.Name = "SkilltypeLabel";
-            this.SkilltypeLabel.Size = new System.Drawing.Size(218, 18);
-            this.SkilltypeLabel.TabIndex = 23;
-            this.SkilltypeLabel.Text = "Skilltype";
-            this.SkilltypeLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
-            // Mobsarround_TargetBox
-            // 
-            this.Mobsarround_TargetBox.AutoCompleteCustomSource.AddRange(new string[] {
-            "Me",
-            "Maintarget"});
-            this.Mobsarround_TargetBox.FormattingEnabled = true;
-            this.Mobsarround_TargetBox.Items.AddRange(new object[] {
-            "Me",
-            "Maintarget"});
-            this.Mobsarround_TargetBox.Location = new System.Drawing.Point(386, 92);
-            this.Mobsarround_TargetBox.Name = "Mobsarround_TargetBox";
-            this.Mobsarround_TargetBox.Size = new System.Drawing.Size(100, 21);
-            this.Mobsarround_TargetBox.TabIndex = 22;
-            // 
-            // MobCheckTagetLabel
-            // 
-            this.MobCheckTagetLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.MobCheckTagetLabel.Location = new System.Drawing.Point(268, 92);
-            this.MobCheckTagetLabel.Name = "MobCheckTagetLabel";
-            this.MobCheckTagetLabel.Size = new System.Drawing.Size(112, 20);
-            this.MobCheckTagetLabel.TabIndex = 20;
-            this.MobCheckTagetLabel.Text = "Target";
-            // 
-            // MobcheckLabel
-            // 
-            this.MobcheckLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.MobcheckLabel.Location = new System.Drawing.Point(268, 21);
-            this.MobcheckLabel.Name = "MobcheckLabel";
-            this.MobcheckLabel.Size = new System.Drawing.Size(218, 18);
-            this.MobcheckLabel.TabIndex = 19;
-            this.MobcheckLabel.Text = "Mobcheck";
-            this.MobcheckLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
-            // CountLabel
-            // 
-            this.CountLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.CountLabel.Location = new System.Drawing.Point(6, 232);
-            this.CountLabel.Name = "CountLabel";
-            this.CountLabel.Size = new System.Drawing.Size(193, 18);
-            this.CountLabel.TabIndex = 18;
-            this.CountLabel.Text = "Count";
-            this.CountLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
-            // DistancesLabel
-            // 
-            this.DistancesLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.DistancesLabel.Location = new System.Drawing.Point(6, 146);
-            this.DistancesLabel.Name = "DistancesLabel";
-            this.DistancesLabel.Size = new System.Drawing.Size(193, 18);
-            this.DistancesLabel.TabIndex = 17;
-            this.DistancesLabel.Text = "Distances";
-            this.DistancesLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
-            // LifeManaSpecificLabel
-            // 
-            this.LifeManaSpecificLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.LifeManaSpecificLabel.Location = new System.Drawing.Point(6, 16);
-            this.LifeManaSpecificLabel.Name = "LifeManaSpecificLabel";
-            this.LifeManaSpecificLabel.Size = new System.Drawing.Size(193, 23);
-            this.LifeManaSpecificLabel.TabIndex = 16;
-            this.LifeManaSpecificLabel.Text = "Life/ManaSpecific";
-            this.LifeManaSpecificLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
-            // Mobsarround_CountBox
-            // 
-            this.Mobsarround_CountBox.Location = new System.Drawing.Point(436, 66);
-            this.Mobsarround_CountBox.Name = "Mobsarround_CountBox";
-            this.Mobsarround_CountBox.Size = new System.Drawing.Size(50, 20);
-            this.Mobsarround_CountBox.TabIndex = 15;
-            // 
-            // MobCheckCountLabel
-            // 
-            this.MobCheckCountLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.MobCheckCountLabel.Location = new System.Drawing.Point(268, 66);
-            this.MobCheckCountLabel.Name = "MobCheckCountLabel";
-            this.MobCheckCountLabel.Size = new System.Drawing.Size(162, 20);
-            this.MobCheckCountLabel.TabIndex = 14;
-            this.MobCheckCountLabel.Text = "Count";
-            // 
-            // Mobsarround_DistanceBox
-            // 
-            this.Mobsarround_DistanceBox.Location = new System.Drawing.Point(436, 40);
-            this.Mobsarround_DistanceBox.Name = "Mobsarround_DistanceBox";
-            this.Mobsarround_DistanceBox.Size = new System.Drawing.Size(50, 20);
-            this.Mobsarround_DistanceBox.TabIndex = 13;
-            // 
-            // MobCheckDistanceLabel
-            // 
-            this.MobCheckDistanceLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.MobCheckDistanceLabel.Location = new System.Drawing.Point(268, 40);
-            this.MobCheckDistanceLabel.Name = "MobCheckDistanceLabel";
-            this.MobCheckDistanceLabel.Size = new System.Drawing.Size(162, 20);
-            this.MobCheckDistanceLabel.TabIndex = 12;
-            this.MobCheckDistanceLabel.Text = "Distance";
-            // 
-            // MaxCountBox
-            // 
-            this.MaxCountBox.Location = new System.Drawing.Point(149, 253);
-            this.MaxCountBox.Name = "MaxCountBox";
-            this.MaxCountBox.Size = new System.Drawing.Size(50, 20);
-            this.MaxCountBox.TabIndex = 11;
-            // 
-            // MaxCountLabel
-            // 
-            this.MaxCountLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.MaxCountLabel.Location = new System.Drawing.Point(6, 253);
-            this.MaxCountLabel.Name = "MaxCountLabel";
-            this.MaxCountLabel.Size = new System.Drawing.Size(137, 20);
-            this.MaxCountLabel.TabIndex = 10;
-            this.MaxCountLabel.Text = "MaxCount";
-            // 
-            // EnemyDistanceBox
-            // 
-            this.EnemyDistanceBox.Location = new System.Drawing.Point(149, 193);
-            this.EnemyDistanceBox.Name = "EnemyDistanceBox";
-            this.EnemyDistanceBox.Size = new System.Drawing.Size(50, 20);
-            this.EnemyDistanceBox.TabIndex = 9;
-            // 
-            // EnemyDistanceLabel
-            // 
-            this.EnemyDistanceLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.EnemyDistanceLabel.Location = new System.Drawing.Point(6, 193);
-            this.EnemyDistanceLabel.Name = "EnemyDistanceLabel";
-            this.EnemyDistanceLabel.Size = new System.Drawing.Size(137, 20);
-            this.EnemyDistanceLabel.TabIndex = 8;
-            this.EnemyDistanceLabel.Text = "EnemyDistance";
-            // 
-            // EnemyinDistanceBox
-            // 
-            this.EnemyinDistanceBox.Location = new System.Drawing.Point(149, 167);
-            this.EnemyinDistanceBox.Name = "EnemyinDistanceBox";
-            this.EnemyinDistanceBox.Size = new System.Drawing.Size(50, 20);
-            this.EnemyinDistanceBox.TabIndex = 7;
-            // 
-            // EnemyInDistanceLabel
-            // 
-            this.EnemyInDistanceLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.EnemyInDistanceLabel.Location = new System.Drawing.Point(6, 167);
-            this.EnemyInDistanceLabel.Name = "EnemyInDistanceLabel";
-            this.EnemyInDistanceLabel.Size = new System.Drawing.Size(137, 20);
-            this.EnemyInDistanceLabel.TabIndex = 6;
-            this.EnemyInDistanceLabel.Text = "EnemyInDistance";
-            // 
-            // MinEnemyLifePercentBox
-            // 
-            this.MinEnemyLifePercentBox.Location = new System.Drawing.Point(149, 91);
-            this.MinEnemyLifePercentBox.Name = "MinEnemyLifePercentBox";
-            this.MinEnemyLifePercentBox.Size = new System.Drawing.Size(50, 20);
-            this.MinEnemyLifePercentBox.TabIndex = 5;
-            // 
-            // MinEnemyLifeLabel
-            // 
-            this.MinEnemyLifeLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.MinEnemyLifeLabel.Location = new System.Drawing.Point(6, 91);
-            this.MinEnemyLifeLabel.Name = "MinEnemyLifeLabel";
-            this.MinEnemyLifeLabel.Size = new System.Drawing.Size(137, 20);
-            this.MinEnemyLifeLabel.TabIndex = 4;
-            this.MinEnemyLifeLabel.Text = "MinEnemyLife%";
-            // 
-            // MinLifePercentBox
-            // 
-            this.MinLifePercentBox.Location = new System.Drawing.Point(149, 65);
-            this.MinLifePercentBox.Name = "MinLifePercentBox";
-            this.MinLifePercentBox.Size = new System.Drawing.Size(50, 20);
-            this.MinLifePercentBox.TabIndex = 3;
-            // 
-            // MinLifeLabel
-            // 
-            this.MinLifeLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.MinLifeLabel.Location = new System.Drawing.Point(6, 65);
-            this.MinLifeLabel.Name = "MinLifeLabel";
-            this.MinLifeLabel.Size = new System.Drawing.Size(137, 20);
-            this.MinLifeLabel.TabIndex = 2;
-            this.MinLifeLabel.Text = "MinLife%";
-            // 
-            // MinManaPercentBox
-            // 
-            this.MinManaPercentBox.Location = new System.Drawing.Point(149, 39);
-            this.MinManaPercentBox.Name = "MinManaPercentBox";
-            this.MinManaPercentBox.Size = new System.Drawing.Size(50, 20);
-            this.MinManaPercentBox.TabIndex = 1;
-            // 
-            // MinManaLabel
-            // 
-            this.MinManaLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.MinManaLabel.Location = new System.Drawing.Point(6, 39);
-            this.MinManaLabel.Name = "MinManaLabel";
-            this.MinManaLabel.Size = new System.Drawing.Size(137, 20);
-            this.MinManaLabel.TabIndex = 0;
-            this.MinManaLabel.Text = "MinMana%";
-
-            this.Location = new System.Drawing.Point(4, 22);
-            this.Name = _Title;
-            this.Padding = new System.Windows.Forms.Padding(3);
-            this.Size = new System.Drawing.Size(515, 367);
-            this.TabIndex = 0;
-            this.Text = _Title;
-            this.UseVisualStyleBackColor = true;
         }
     }
 }
