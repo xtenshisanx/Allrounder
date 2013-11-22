@@ -22,6 +22,10 @@ namespace Allrounder
         private void LoadSettings()
         {
             this.SkillSettingsBody.TabPages.RemoveAt(0);
+            if(!File.Exists(Loki.Bot.GlobalSettings.SettingsPath + "\\Allrounder\\" + Loki.Game.LokiPoe.Me.Name + ".cfg"))
+            {
+                File.Create(Loki.Bot.GlobalSettings.SettingsPath + "\\Allrounder\\" + Loki.Game.LokiPoe.Me.Name + ".cfg");
+            }
             StreamReader Reader = new StreamReader(Loki.Bot.GlobalSettings.SettingsPath + "\\Allrounder\\" + Loki.Game.LokiPoe.Me.Name + ".cfg");
             string line = null;
             string left = null;
@@ -36,10 +40,10 @@ namespace Allrounder
                     left = line.Split('=')[0].Trim();
                 if(left != null && !left.Equals("CastEnd") && !left.Equals("") && !left.Contains('#'))
                 {
-                    Variables.Log.DebugFormat("String: {0}", line);
+                    //Variables.Log.DebugFormat("String: {0}", line);
                     if (line.Split('=')[1].Trim() != null)
                         right = line.Split('=')[1].Trim();
-                    Variables.Log.DebugFormat("left: {0} right: {1}", left,right);
+                    //Variables.Log.DebugFormat("left: {0} right: {1}", left,right);
                     //Charactersettings
                     if(left.Equals("FightDistance"))
                     {
@@ -156,7 +160,7 @@ namespace Allrounder
 
             int CurrentPosition = this.SkillSettingsBody.TabPages.IndexOf(this.SkillSettingsBody.SelectedTab);
 
-            if (CurrentPosition == null)
+            if (CurrentPosition == 0)
                 return;
 
             TabPage Current = this.SkillSettingsBody.SelectedTab;
