@@ -21,105 +21,128 @@ namespace Allrounder
 
         private void LoadSettings()
         {
+            SkillTab tab = null;
             this.SkillSettingsBody.TabPages.RemoveAt(0);
-            if(!File.Exists(Loki.Bot.GlobalSettings.SettingsPath + "\\Allrounder\\" + Loki.Game.LokiPoe.Me.Name + ".cfg"))
+
+            this.PotManaBox.Text = Settings.Instance.PotMana.ToString();
+            this.PotHealthBox.Text = Settings.Instance.PotHealth.ToString();
+            this.FightDistanceBox.Text = Settings.Instance.FightDistance.ToString();
+
+            foreach(Skill skill in Settings.Instance.Skills)
             {
-                File.Create(Loki.Bot.GlobalSettings.SettingsPath + "\\Allrounder\\" + Loki.Game.LokiPoe.Me.Name + ".cfg");
-            }
-            StreamReader Reader = new StreamReader(Loki.Bot.GlobalSettings.SettingsPath + "\\Allrounder\\" + Loki.Game.LokiPoe.Me.Name + ".cfg");
-            string line = null;
-            string left = null;
-            string right = null;
-            TabPage _current = null;
-            
-            while((line = Reader.ReadLine())!=null)
-            {
-                left = null;
-                right = null;
-                if (line.Split('=')[0].Trim() != null)
-                    left = line.Split('=')[0].Trim();
-                if(left != null && !left.Equals("CastEnd") && !left.Equals("") && !left.Contains('#'))
+                tab = new SkillTab(skill.Name);
+                foreach(System.Reflection.PropertyInfo info in typeof(Skill).GetProperties())
                 {
-                    //Variables.Log.DebugFormat("String: {0}", line);
-                    if (line.Split('=')[1].Trim() != null)
-                        right = line.Split('=')[1].Trim();
-                    //Variables.Log.DebugFormat("left: {0} right: {1}", left,right);
-                    //Charactersettings
-                    if(left.Equals("FightDistance"))
+                    if (info.GetValue(skill) != null && (info.PropertyType.ToString().Contains("Int32")) && (info.Name.Equals("MobsAroundTarget") || (Int32)info.GetValue(skill) != 0))
                     {
-                        this.FightDistanceBox.Text = right;
-                        continue;
-                    }
-                    if(left.Equals("PotHealth"))
-                    {
-                        this.PotHealthBox.Text = right;
-                        continue;
-                    }
-                    if(left.Equals("PotMana"))
-                    {
-                        this.PotManaBox.Text = right;
-                        continue;
-                    }
-                    //Generates a new Skill
-                    if (left.ToLower().Equals("name"))
-                    {
-                        right.Replace("\"", "");
-                        this.SkillSettingsBody.TabPages.Add(new SkillTab(right));
-                        _current = this.SkillSettingsBody.TabPages[right];
-                        continue;
-                    }
-                    //Changes Skillsettings
-                    if (!Left.Equals("FightDistance") && !Left.Equals("PotHealth") && !Left.Equals("PotMana") && this.SkillSettingsBody.TabPages[this.SkillSettingsBody.TabPages.IndexOf(_current)].Controls.Find(left + "Box", true).FirstOrDefault() != null)
-                    {
-                        object temp = null;
-                        if (this.SkillSettingsBody.TabPages[this.SkillSettingsBody.TabPages.IndexOf(_current)].Controls.Find(left + "Box", true).FirstOrDefault().GetType().Name == "TextBox")
+                        if (tab.Controls[info.Name + "Box"] != null)
                         {
-                            temp = (TextBox)this.SkillSettingsBody.TabPages[this.SkillSettingsBody.TabPages.IndexOf(_current)].Controls[left + "Box"];
-                            (temp as TextBox).Text = line.Split('=')[1].Trim();
-                            continue;
-                        }
-                        if (this.SkillSettingsBody.TabPages[this.SkillSettingsBody.TabPages.IndexOf(_current)].Controls.Find(left + "Box", true).FirstOrDefault().GetType().Name == "ComboBox")
-                        {
-                            temp = (ComboBox)this.SkillSettingsBody.TabPages[this.SkillSettingsBody.TabPages.IndexOf(_current)].Controls[left + "Box"];
-                            (temp as ComboBox).Text = line.Split('=')[1].Trim();
+                            if (info.Name.Equals("MobsAroundTarget"))
+                            {
+                                if ((Int32)info.GetValue(skill) == 1)
+                                {
+                                    tab.Controls[info.Name + "Box"].Text = "Me";
+                                }
+                                else
+                                {
+                                    tab.Controls[info.Name + "Box"].Text = "Maintarget";
+                                }
+                            }
+                            else
+                            {
+                                tab.Controls[info.Name + "Box"].Text = info.GetValue(skill).ToString();
+                            }
                             continue;
                         }
                     }
-                    if (right != null && Boolean.Parse(line.Split('=')[1].Trim()))
+                    if (info.GetValue(skill) != null && (info.PropertyType.ToString().Contains("String") && ((String)info.GetValue(skill)) != null))
                     {
-                        CheckedListBox temp = (CheckedListBox)this.SkillSettingsBody.TabPages[this.SkillSettingsBody.TabPages.IndexOf(_current)].Controls["SkillTypeCheckBox"];
-                        int buttonindex = temp.Items.IndexOf(left);
-                        temp.SetItemChecked(buttonindex, true);
-                        continue;
+                        if (tab.Controls[info.Name + "Box"] != null)
+                        {
+                            tab.Controls[info.Name + "Box"].Text = info.GetValue(skill).ToString();
+                            continue;
+                        }
+                    }
+                    if(info.PropertyType.ToString().Contains("Boolean") && (Boolean)info.GetValue(skill))
+                    {
+                        CheckedListBox box = (CheckedListBox)tab.Controls["SkillTypeCheckBox"];
+                        Int32 index = -1;
+                        if(box != null)
+                        {
+                            index = box.Items.IndexOf(info.Name);
+                            if(index == -1)
+                            {
+                                continue;
+                            }
+                            box.SetItemChecked(index, true);
+                        }
                     }
                 }
+                this.SkillSettingsBody.TabPages.Add(tab);
+                tab = null;
             }
-            Reader.Close();
         }
         private void SaveSettings()
         {
-            StreamWriter Writer = new StreamWriter(Loki.Bot.GlobalSettings.SettingsPath + "\\Allrounder\\" + Loki.Game.LokiPoe.Me.Name + ".cfg");
-            Writer.WriteLine("PotHealth = {0}", this.PotHealthBox.Text);
-            Writer.WriteLine("PotMana = {0}", this.PotManaBox.Text);
-            Writer.WriteLine("FightDistance = {0}", this.FightDistanceBox.Text);
+            if (!this.PotHealthBox.Text.Equals(""))
+            {
+                Settings.Instance.PotHealth = Convert.ToInt32(this.PotHealthBox.Text);
+            }
+            if (!this.PotManaBox.Text.Equals(""))
+            {
+                Settings.Instance.PotMana = Convert.ToInt32(this.PotManaBox.Text);
+            }
+            if (!this.FightDistanceBox.Text.Equals(""))
+            {
+                Settings.Instance.FightDistance = Convert.ToInt32(this.FightDistanceBox.Text);
+            }
+            Settings.Instance.Skills = new List<Skill>();
             foreach (TabPage page in SkillSettingsBody.TabPages)
             {
-                Writer.WriteLine("Name = {0}", page.Text);
-                foreach (Control _control in page.Controls)
+                if (page.Text != null)
                 {
-                    if (_control.Name.ToLower().Contains("box") && !_control.Text.Equals("") && !_control.Name.Equals("SkillTypeCheckBox"))
-                        Writer.WriteLine("{0} = {1}", _control.Name.Replace("Box", ""), _control.Text);
-                    if (_control.Name.Equals("SkillTypeCheckBox"))
+                    Skill temp = new Skill(page.Text);
+                    foreach (Control _control in page.Controls)
                     {
-                        foreach (object item in (_control as CheckedListBox).CheckedItems)
+                        if (_control.Name.ToLower().Contains("box") && !_control.Text.Equals("") && !_control.Name.Equals("SkillTypeCheckBox"))
                         {
-                            Writer.WriteLine("{0} = {1}", item, true);
+                            if (typeof(Skill).GetProperty(_control.Name.Replace("Box", "")).PropertyType.ToString().Contains("Int32"))
+                            {
+                                Int32 tmp = 0;
+                                if (_control.Name.Replace("Box", "").ToLower().Contains("aroundtarget"))
+                                {
+                                    if (_control.Text.ToLower().Equals("me"))
+                                    {
+                                        tmp = 1;
+                                    }
+                                    else
+                                    {
+                                        tmp = 0;
+                                    }
+                                }
+                                else
+                                {
+                                    tmp = Int32.Parse(_control.Text);
+                                }
+                                typeof(Skill).GetProperty(_control.Name.Replace("Box", "")).SetValue(temp, tmp);
+                            }
+                            if (typeof(Skill).GetProperty(_control.Name.Replace("Box", "")).PropertyType.ToString().Contains("String") )
+                            {
+                                typeof(Skill).GetProperty(_control.Name.Replace("Box", "")).SetValue(temp, _control.Text);
+                            }
+                        }
+                        if (_control.Name.Equals("SkillTypeCheckBox"))
+                        {
+                            foreach (object item in (_control as CheckedListBox).CheckedItems)
+                            {
+                                typeof(Skill).GetProperty(item.ToString()).SetValue(temp, true);
+                            }
                         }
                     }
+                    Settings.Instance.Skills.Add(temp);
                 }
-                Writer.WriteLine("CastEnd");
             }
-            Writer.Close();
+            Settings.Instance.Save();
         }
         private void SaveButton_Click(object sender, EventArgs e)
         {

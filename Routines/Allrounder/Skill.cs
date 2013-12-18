@@ -40,7 +40,7 @@ namespace Allrounder
         public int MobsAroundDistance { get; set; }
         public int MobsAroundCount { get; set; }
         public int MobsAroundTarget { get; set; }
-        public int EnemyinDistance { get; set; }
+        public int EnemyInDistance { get; set; }
         public int EnemyDistance { get; set; }
         public int MaxCount { get; set; }
         public int CurrentCount { get; set; }
@@ -54,23 +54,18 @@ namespace Allrounder
         public bool IsRanged { get; set; }
         public bool GeneratesCharges { get; set; }
         public bool KeepChargesUp { get; set; }
-
-        public WaitTimer Cooldown;
-        public Spell SpellPtr { get { return GetSpell(this.Name); } }
         #endregion
         #region Constructor
         public Skill(string _name)
         {
             this.Name = _name;
-            this.Cooldown = new WaitTimer(new TimeSpan(GetSpellCooldown(this.Name).Ticks));
-            //this.SpellPtr = Functions.GetSpell(this.Name);
             this.MinManaPercent = 0;
             this.MinLifePercent = 0;
             this.MinEnemyLifePercent = 0;
             this.MobsAroundCount = 0;
             this.MobsAroundDistance = 0;
             this.MobsAroundTarget = 0;
-            this.EnemyinDistance = 0;
+            this.EnemyInDistance = 0;
             this.EnemyDistance = 0;
             this.MaxCount = 0;
             this.CurrentCount = 0;
@@ -194,8 +189,8 @@ namespace Allrounder
         #region CanCast
         public bool CanCast()
         {
-            //Variables.Log.Debug("CanCast(" + this.Name + ") Check for Cast");
-            if (this.SpellPtr.UsesAvailable <= 0)
+            Allrounder.Log.Debug("CanCast(" + this.Name + ") Check for Cast");
+            if (GetSpell(this.Name).UsesAvailable <= 0)
                 return false;
             int Truechecks = 0;
             int Trues = 0;
@@ -210,7 +205,7 @@ namespace Allrounder
                 Truechecks++;
             if (this.EnemyDistance != 0)
                 Truechecks++;
-            if (this.EnemyinDistance != 0)
+            if (this.EnemyInDistance != 0)
                 Truechecks++;
             if (this.MaxCount != 0 && !this.IsTrap && !this.IsSummon && !this.IsTotem && !this.GeneratesCharges)
                 Truechecks++;
@@ -248,7 +243,7 @@ namespace Allrounder
                 Trues++;
             if (this.MobsAroundDistance != 0 && (MobsAroundTarget == 1 && Functions.NumberOfEnemysNear(LokiPoe.Me, MobsAroundDistance, MobsAroundCount) || MobsAroundTarget == 0 && Functions.NumberOfEnemysNear(Variables.MainTarget, MobsAroundDistance, MobsAroundCount)))
                 Trues++;
-            if (this.EnemyinDistance != 0 && Variables.MainTarget.Distance <= this.EnemyinDistance)
+            if (this.EnemyInDistance != 0 && Variables.MainTarget.Distance <= this.EnemyInDistance)
                 Trues++;
             if (this.EnemyDistance != 0 && Variables.MainTarget.Distance >= this.EnemyDistance)
                 Trues++;
@@ -260,14 +255,14 @@ namespace Allrounder
                 Trues++;
             if (this.IsTotem && ShouldRaiseTotem())
                 Trues++;
+            if (this.IsTrap && ShouldThrowTrap())
+                Trues++;
+            if (this.IsSummon && ShouldRaiseMinions())
+                Trues++;
             if (this.MaxCount != 0)
             {
                 //TrapCheck
-                if (this.IsTrap && ShouldThrowTrap())
-                    Trues++;
                 //SummonCheck
-                if (this.IsSummon && ShouldRaiseMinions())
-                    Trues++;
                 //TotemCheck
                 //AttackCheck
                 if (!this.IsTrap && !this.IsSummon && !this.IsTotem && !this.GeneratesCharges && CurrentCount != MaxCount)
@@ -275,7 +270,7 @@ namespace Allrounder
             }
             if (Variables.MainTarget.Rarity >= Rarity.Rare && OnlyBosses)
                 Trues++;
-            //Variables.Log.DebugFormat("Allrounder(Cast): Trying to Cast {0} Truechecks {1}:{2}", this.Name, Trues, Truechecks);
+            Allrounder.Log.DebugFormat("Allrounder(Cast): Trying to Cast {0} Truechecks {1}:{2}", this.Name, Trues, Truechecks);
             if (Trues >= Truechecks && !Variables.Me.IsAbilityCooldownActive)
             {
                 //Variables.Log.Debug("Allrounder(Cast): " + this.Name);

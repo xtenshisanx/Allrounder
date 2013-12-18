@@ -23,13 +23,12 @@ namespace Allrounder
         public static PrioritySelector Fight;
         public override void Initialize()
         {
+            Settings.DefualtSettings();
             Fight = new PrioritySelector();
-            Settings.FightDistance = 50;
             BotMain.OnStart += OnStart;
             BotMain.OnStop += OnStop;
             BotMain.OnTick += Pulse;
             Log.Debug("Allrounder by xTenshiSanx has been loaded");
-            Functions.CheckForConfig();
         }
         void OnStart(IBot bot)
         {
@@ -37,10 +36,10 @@ namespace Allrounder
             {
                 if (!Variables.IsStarted)
                 {
+                    Settings.DefualtSettings();
                     Log.Debug("Allrounder by xTenshiSanx has been started");
                     Log.Debug("Loading Skills...");
-                    Functions.CheckForConfig();
-                    foreach (Skill atk in Variables.SkillList)
+                    foreach (Skill atk in Settings.Instance.Skills)
                     {
                         if (atk.IsSummon)
                         {
@@ -59,12 +58,9 @@ namespace Allrounder
         }
         void OnStop(IBot bot)
         {
-            if (RoutineManager.Current.Name == this.Name)
-            {
-                Fight = new PrioritySelector();
-                Variables.SkillList = new List<Skill>();
-                Variables.IsStarted = false;
-            }
+            Fight = new PrioritySelector();
+            Variables.SkillList = new List<Skill>();
+            Variables.IsStarted = false;
         }
         void Pulse(IBot bot)
         {
@@ -83,13 +79,13 @@ namespace Allrounder
         private Composite FlaskBot()
         {
             return new PrioritySelector(
-                new Decorator(ret => _flaskCd.IsFinished && Variables.Me.HealthPercent < Settings.PotHealth && Variables.LifeFlasks.Count() != 0 && !Variables.Me.HasAura("flask_effect_life"),
+                new Decorator(ret => _flaskCd.IsFinished && Variables.Me.HealthPercent < Settings.Instance.PotHealth && Variables.LifeFlasks.Count() != 0 && !Variables.Me.HasAura("flask_effect_life"),
                     new Action(ret =>
                     {
                         Variables.LifeFlasks.First().Use();
                         _flaskCd.Reset();
                     })),
-                new Decorator(ret => _flaskCd.IsFinished && Variables.Me.ManaPercent < Settings.PotMana && Variables.ManaFlasks.Count() != 0 && !Variables.Me.HasAura("flask_effect_mana"),
+                new Decorator(ret => _flaskCd.IsFinished && Variables.Me.ManaPercent < Settings.Instance.PotMana && Variables.ManaFlasks.Count() != 0 && !Variables.Me.HasAura("flask_effect_mana"),
                     new Action(ret =>
                     {
                         Variables.ManaFlasks.First().Use();
@@ -107,7 +103,7 @@ namespace Allrounder
             return new PrioritySelector(
                 FlaskBot(),
                 Functions.CreateMoveToLos(),
-                Functions.CreateMoveToRange(Settings.FightDistance),
+                Functions.CreateMoveToRange(Settings.Instance.FightDistance),
                 Fight
             );
         }

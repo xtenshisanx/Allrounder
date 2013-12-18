@@ -35,7 +35,7 @@ namespace Allrounder
                 new Sequence(
                 SpellManager.CreateSpellCastComposite(spell, reqs, ret => Variables.MainTarget),
                 //new WaitContinue(TimeSpan.FromMilliseconds(300), ret => false, new Action(delegate { return RunStatus.Success; })),
-                new Action(delegate { Allrounder.Log.DebugFormat("Allrounder(Cast): Casted {0}", spell); Variables.SkillList.FirstOrDefault(s => s.Name.Equals(spell)).Cooldown.Reset(); return RunStatus.Failure; })));
+                new Action(delegate { Allrounder.Log.DebugFormat("Allrounder(Cast): Casted {0}", spell); return RunStatus.Failure; })));
         }
         public static Composite Cast(string spell, SpellManager.GetSelection<Vector2i> location, SpellManager.GetSelection<bool> reqs = null)
         {
@@ -49,7 +49,7 @@ namespace Allrounder
             return new PrioritySelector(
                 new Sequence(
                 SpellManager.CreateSpellCastComposite(spell, reqs, location),
-                new Action(delegate { Allrounder.Log.DebugFormat("Allrounder(Cast): Casted {0}", spell); Variables.SkillList.FirstOrDefault(s => s.Name.Equals(spell)).Cooldown.Reset(); return RunStatus.Failure; })));
+                new Action(delegate { Allrounder.Log.DebugFormat("Allrounder(Cast): Casted {0}", spell); return RunStatus.Failure; })));
         }
         #endregion
         #region CreateMoveToLos
@@ -91,106 +91,6 @@ namespace Allrounder
         public static int NumberOfEnemysNearMe(int distance)
         {
             return LokiPoe.EntityManager.OfType<Actor>().Count(enemy => enemy.IsValid && enemy.Reaction == Reaction.Enemy && enemy.Distance <= distance && !enemy.IsDead);
-        }
-        #endregion
-        #region ReadConfig
-        public static void ReadConfig(string file)
-        {
-            Variables.SkillList = new List<Skill>();
-            TextReader tr = new StreamReader(file);
-            Skill currentSkill = null;
-            string line = null;
-            string left = null;
-            string right = null;
-
-            while ((line = tr.ReadLine()) != null)
-            {
-                if (!line.Contains('#') && !line.Equals("CastEnd"))
-                {
-                    left = null;
-                    right = null;
-                    line = line.Replace("\"", "");
-                    left = line.Split('=')[0].Trim();
-                    right = line.Split('=')[1].Trim();
-                    if (left.Equals("PotHealth"))
-                    {
-                        Settings.PotHealth = Int32.Parse(right);
-                    }
-
-                    if (left.Equals("PotMana"))
-                    {
-                        Settings.PotMana = Int32.Parse(right);
-                    }
-
-                    if (left.Equals("FightDistance"))
-                    {
-                        Settings.FightDistance = Int32.Parse(right);
-                    }
-                    if(left.Equals("Name"))
-                    {
-                        currentSkill = new Skill(right);
-                        continue;
-                    }
-                    if(typeof(Skill).GetProperty(left) != null)
-                    {
-                        if(typeof(Skill).GetProperty(left).PropertyType.Name.Contains("Int32"))
-                        {
-                            if (typeof(Skill).GetProperty(left).Name.Equals("MobsAroundTarget"))
-                            {
-                                if (right.Equals("Me"))
-                                {
-                                    typeof(Skill).GetProperty(left).SetValue(currentSkill, 1);
-                                }
-                                if (right.Equals("Maintarget"))
-                                {
-                                    typeof(Skill).GetProperty(left).SetValue(currentSkill, 0);
-                                }
-                            }
-                            else
-                            {
-                                typeof(Skill).GetProperty(left).SetValue(currentSkill, Int32.Parse(right));
-                            }
-                            continue;
-                        }
-                        if (typeof(Skill).GetProperty(left).PropertyType.Name.Contains("String"))
-                        {
-                            typeof(Skill).GetProperty(left).SetValue(currentSkill, right);
-                            continue;
-                        }
-                        if (typeof(Skill).GetProperty(left).PropertyType.Name.Contains("Boolean"))
-                        {
-                            typeof(Skill).GetProperty(left).SetValue(currentSkill, Boolean.Parse(right));
-                            continue;
-                        }
-                    }
-                }
-                if(line.Equals("CastEnd"))
-                {
-                    Variables.SkillList.Add(currentSkill);
-                    currentSkill = null;
-                }
-            }
-            tr.Close();
-        }
-        #endregion
-        #region CheckForConfig
-        public static void CheckForConfig()
-        {
-            string Filename = Variables.Me.Name + ".cfg";
-            string Folder = Loki.Bot.GlobalSettings.SettingsPath + "\\Allrounder\\";
-            if (File.Exists(Folder + Filename))
-            {
-                Allrounder.Log.Debug("File " + Folder + Filename + " Exists");
-                ReadConfig(Folder + Filename);
-            }
-            else
-            {
-                Allrounder.Log.Debug("File " + Folder + Filename + " dosnt exists");
-                File.Create(Filename);
-                Allrounder.Log.Debug("Please Check your Character-Settingsfile in " + Folder);
-                Allrounder.Log.Debug("And add your spells like in the example");
-                BotMain.Stop("First time use");
-            }
         }
         #endregion
         #region ObjectHasSpell
